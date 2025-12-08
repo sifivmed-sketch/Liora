@@ -61,56 +61,61 @@ const LoginForm = () => {
      * @returns JSX.Element
      */
     return (
-        <form id="login-form" className="space-y-6" noValidate onSubmit={handleSubmit(onSubmit)}>
-            <Input
-                label={t("email")}
-                type="email"
-                placeholder={t("email-placeholder")}
-                required
-                registration={register("email")}
-                error={errors.email?.message}
-                helperText={t("email-helper-text")}
-                showError={false}
-                autoComplete="email"
-                icon={<EmailIcon className="text-[var(--color-light-blue)]"  /> }
-                helperTextClassName="!text-[var(--color-secondary)]"
-            />
-            
-            <Input
-                label={t("password")}
-                type="password"
-                placeholder={t("password-placeholder")}
-                required
-                registration={register("password")}
-                error={errors.password?.message}
-                helperText={t("password-helper-text")}
-                showError={false}
-                icon={<LockIcon className="text-[var(--color-light-blue)]" /> }
-                helperTextClassName="!text-[var(--color-secondary)]"
-            />
+      <form
+        id="login-form"
+        className="space-y-6"
+        noValidate
+        onSubmit={handleSubmit(onSubmit)}
+      >
+        <Input
+          label={t("email")}
+          type="email"
+          placeholder={t("email-placeholder")}
+          required
+          registration={register("email")}
+          error={errors.email?.message}
+          helperText={t("email-helper-text")}
+          showError={false}
+          autoComplete="email"
+          icon={<EmailIcon className="text-[var(--color-light-blue)]" />}
+          helperTextClassName="!text-[var(--color-secondary)]"
+        />
 
-            <div className="text-right -mt-5">
-                <Link href="#" type="next" variant="medical" className="text-sm">
-                    {t("forgot-password")}
-                </Link>
-            </div>
+        <Input
+          label={t("password")}
+          type="password"
+          placeholder={t("password-placeholder")}
+          required
+          registration={register("password")}
+          error={errors.password?.message}
+          helperText={t("password-helper-text")}
+          showError={false}
+          icon={<LockIcon className="text-[var(--color-light-blue)]" />}
+          helperTextClassName="!text-[var(--color-secondary)]"
+        />
 
-            {/* Error message display */}
-            {loginError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                    {loginError}
-                </div>
-            )}
+        <div className="text-right -mt-5">
+          <Link href="#" type="next" variant="medical" className="text-sm">
+            {t("forgot-password")}
+          </Link>
+        </div>
 
-            <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-[var(--color-primary)] text-white py-2 px-4 rounded-lg hover:bg-[#248456] hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
-            >
-                {isSubmitting ? t("logging-in") : t("login")}
-            </button>
-        </form>
-    )
+        {/* Error message display */}
+        {loginError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            {loginError}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full bg-[var(--color-medical-primary)] text-white py-2 px-4 rounded-lg hover:bg-[#1d4ed8] hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
+        >
+          {isSubmitting ? t("logging-in") : t("login")}
+        </button>
+      </form>
+    );
 }
 
 export default LoginForm;

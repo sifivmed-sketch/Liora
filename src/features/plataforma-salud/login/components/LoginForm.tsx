@@ -18,13 +18,12 @@ const LoginForm = () => {
     const router = useRouter();
     const [loginError, setLoginError] = useState<string | null>(null);
 
-    const { 
-        register, 
-        handleSubmit, 
-        formState: { errors, isSubmitting },
-        setError
+    const {
+      register,
+      handleSubmit,
+      formState: { errors, isSubmitting },
     } = useForm<LoginFormData>({
-        resolver: zodResolver(loginSchema),
+      resolver: zodResolver(loginSchema),
     });
 
     // Get station ID (automatically initialized globally)
