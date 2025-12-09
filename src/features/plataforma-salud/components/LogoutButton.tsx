@@ -1,13 +1,28 @@
 'use client';
 
-import { HealthPlatformLogout } from "@/lib/auth/auth-plataforma-salud.helper";
+import { useRouter } from "@/i18n/navigation";
+import { deleteHealthPlatformSession } from "@/lib/auth/auth-actions";
 
 const LogoutButton = () => {
-    return (
-        <button onClick={async () => await HealthPlatformLogout()} className="bg-red-700 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-all duration-200 cursor-pointer" >
-            Cerrar sesión
-        </button>
-    )
-}
+  const router = useRouter();
+
+  /**
+   * Handles the logout action
+   * @returns void
+   */
+  const handleLogout = async () => {
+    await deleteHealthPlatformSession();
+    router.push("/plataforma-salud/login");
+  };
+
+  return (
+    <button
+      onClick={handleLogout}
+      className="bg-red-700 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-all duration-200 cursor-pointer"
+    >
+      Cerrar sesión
+    </button>
+  );
+};
 
 export default LogoutButton;
