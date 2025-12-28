@@ -21,8 +21,8 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "Liora",
-  description: "Sistema de gestión médica Liora para profesionales de la salud",
+  title: "Whobi",
+  description: "Sistema de gestión médica Whobi para profesionales de la salud",
 };
 
 export default async function RootLayout({

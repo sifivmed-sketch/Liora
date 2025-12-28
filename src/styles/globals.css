@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
-/* Sistema de diseño Liora - Área Médica */
+/* Sistema de diseño Whobi - Área Médica */
 :root {
-  /* Colores Liora Base */
+  /* Colores Whobi Base */
   --color-primary: #2CA66F;
   --color-secondary: #6FCF97;
   --color-security: #2F80ED;
   --color-light-blue: #56CCF2;
-  --color-light-gray: #F2F2F2;
+  --color-light-gray: #F2F2F2;  
   --color-dark-gray: #333333;
   
   /* Colores Área Médica */
@@ -52,7 +52,7 @@
 }
 
 @theme inline {
-  /* Liora Color System */
+  /* Whobi Color System */
   --color-primary: var(--color-primary);
   --color-secondary: var(--color-secondary);
   --color-security: var(--color-security);
