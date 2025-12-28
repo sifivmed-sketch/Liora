@@ -54,6 +54,7 @@ const DashboardSidebar = () => {
    * @returns void
    */
   const handleMenuItemClick = (path: string) => {
+    // @ts-expect-error - Dynamic paths not in routing config
     router.push(path);
   };
 

@@ -2,7 +2,7 @@
 
 interface ProfileCardProps {
   userName: string;
-  userEmail: string;
+  userEmail?: string;
   status?: string;
   plan?: string;
   lastVisit?: string;
