@@ -1,4 +1,5 @@
 import z from "zod";
+import { cleanPhoneNumber } from "@/lib/utils/phone.utils";
 
 /**
  * Creates a register schema with custom error messages
@@ -11,7 +12,16 @@ export const createRegisterSchema = (t: (key: string) => string) =>
       name: z.string().min(1, { message: t("name-error") }),
       lastName: z.string().min(1, { message: t("last-name-error") }),
       email: z.email({ message: t("email-error") }),
-      phone: z.string().min(1, { message: t("phone-error") }),
+      phone: z
+        .string()
+        .min(1, { message: t("phone-error") })
+        .refine(
+          (val) => {
+            const numbers = cleanPhoneNumber(val);
+            return numbers.length === 10;
+          },
+          { message: t("phone-error") }
+        ),
       password: z
         .string()
         .min(8, { message: t("password-error") })
