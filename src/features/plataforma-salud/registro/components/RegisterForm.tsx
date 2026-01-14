@@ -3,7 +3,7 @@
 import Input from "@/components/Input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Link from "@/components/Link";
 import {
@@ -15,11 +15,6 @@ import {
 import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 import { useRegistrationStore } from "@/lib/stores/registration.store";
-import {
-  formatPhoneNumber,
-  handlePhoneKeyDown,
-  cleanPhoneNumber,
-} from "@/lib/utils/phone.utils";
 
 const RegisterForm = () => {
   const t = useTranslations("plataforma-salud.register");
@@ -32,22 +27,6 @@ const RegisterForm = () => {
 
   const registerSchema = z
     .object({
-      username: z
-        .string()
-        .min(3, { message: t("username-error-min") })
-        .max(20, { message: t("username-error-max") }),
-      name: z.string().min(1, { message: t("name-error") }),
-      lastName: z.string().min(1, { message: t("last-name-error") }),
-      phone: z
-        .string()
-        .min(1, { message: t("phone-error") })
-        .refine(
-          (val) => {
-            const numbers = cleanPhoneNumber(val);
-            return numbers.length === 10;
-          },
-          { message: t("phone-error") }
-        ),
       email: z.email({ message: t("email-error") }),
       password: z
         .string()
@@ -71,7 +50,6 @@ const RegisterForm = () => {
     register,
     handleSubmit,
     formState: { errors },
-    control,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
@@ -87,15 +65,8 @@ const RegisterForm = () => {
     setApiError(null); // Clear previous errors
 
     try {
-      // Clean phone number: remove formatting characters, keep only digits
-      const cleanPhone = cleanPhoneNumber(data.phone);
-
       const request: RegisterPatientRequest = {
-        usuario: data.username,
-        nombre: data.name,
-        apellidos: data.lastName,
         email: data.email,
-        telefono: cleanPhone,
         clave: data.password,
       };
 
@@ -105,16 +76,18 @@ const RegisterForm = () => {
         // Mark registration as successful and store user email
         markRegistrationSuccessful(data.email);
         // Redirect to success page with i18n support
+        // Keep loading state active during navigation
         router.push({ pathname: "/plataforma-salud/registro-exitoso" });
+        // Don't set isSubmitting to false here - let the component unmount during navigation
       } else {
         const errorMessage = getRegistrationErrorMessage(response);
         setApiError(errorMessage || t("registration-failed"));
+        setIsSubmitting(false);
       }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : t("unexpected-error");
       setApiError(errorMessage);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -126,112 +99,40 @@ const RegisterForm = () => {
       noValidate
       onSubmit={handleSubmit(onSubmit)}
     >
-      {/* Personal Information */}
-      <section>
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            {t("personal-information-title")}
-          </h2>
-          <p className="text-gray-600 text-sm">
-            {t("personal-information-description")}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 gap-6">
+        <Input
+          label={t("email")}
+          type="email"
+          placeholder={t("email-placeholder")}
+          required
+          registration={register("email")}
+          error={errors.email?.message}
+          autoComplete="email"
+          disabled={isSubmitting}
+        />
 
-        <div className="grid grid-cols-1 mb-6">
-          <Input
-            label={t("username")}
-            type="text"
-            placeholder={t("username-placeholder")}
-            required
-            registration={register("username")}
-            error={errors.username?.message}
-            autoComplete="username"
-            helperText={t("username-helper-text")}
-            helperTextClassName="!text-[var(--color-secondary)]"
-            disabled={isSubmitting}
-          />
-        </div>
+        <Input
+          label={t("password")}
+          type="password"
+          placeholder={t("password-placeholder")}
+          required
+          registration={register("password")}
+          error={errors.password?.message}
+          helperText={t("password-helper-text")}
+          helperTextClassName="!text-[var(--color-secondary)]"
+          disabled={isSubmitting}
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Input
-            label={t("name")}
-            type="text"
-            placeholder={t("name-placeholder")}
-            required
-            registration={register("name")}
-            error={errors.name?.message}
-            autoComplete="name"
-            disabled={isSubmitting}
-          />
-
-          <Input
-            label={t("last-name")}
-            type="text"
-            placeholder={t("last-name-placeholder")}
-            required
-            registration={register("lastName")}
-            error={errors.lastName?.message}
-            autoComplete="family-name"
-            disabled={isSubmitting}
-          />
-
-          <Controller
-            name="phone"
-            control={control}
-            render={({ field }) => (
-              <Input
-                label={t("phone")}
-                type="tel"
-                placeholder="(000) 000-0000"
-                required
-                error={errors.phone?.message}
-                autoComplete="tel"
-                disabled={isSubmitting}
-                value={field.value || ""}
-                onChange={(e) => {
-                  const formatted = formatPhoneNumber(e.target.value);
-                  field.onChange(formatted);
-                }}
-                onKeyDown={handlePhoneKeyDown}
-                maxLength={14}
-              />
-            )}
-          />
-
-          <Input
-            label={t("email")}
-            type="email"
-            placeholder={t("email-placeholder")}
-            required
-            registration={register("email")}
-            error={errors.email?.message}
-            autoComplete="email"
-            disabled={isSubmitting}
-          />
-
-          <Input
-            label={t("password")}
-            type="password"
-            placeholder={t("password-placeholder")}
-            required
-            registration={register("password")}
-            error={errors.password?.message}
-            helperText={t("password-helper-text")}
-            helperTextClassName="!text-[var(--color-secondary)]"
-            disabled={isSubmitting}
-          />
-
-          <Input
-            label={t("confirm-password")}
-            type="password"
-            placeholder={t("confirm-password-placeholder")}
-            required
-            registration={register("confirmPassword")}
-            error={errors.confirmPassword?.message}
-            disabled={isSubmitting}
-          />
-        </div>
-      </section>
+        <Input
+          label={t("confirm-password")}
+          type="password"
+          placeholder={t("confirm-password-placeholder")}
+          required
+          registration={register("confirmPassword")}
+          error={errors.confirmPassword?.message}
+          disabled={isSubmitting}
+        />
+      </div>
 
       <div>
         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">

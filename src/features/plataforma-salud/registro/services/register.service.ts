@@ -6,16 +6,8 @@ import { useStationStore } from '@/lib/stores/station.store';
  * Based on the API documentation structure
  */
 interface RegisterPatientRequest {
-  /** Patient's username */
-  usuario: string;
-  /** Patient's first name */
-  nombre: string;
-  /** Patient's last name */
-  apellidos: string;
   /** Patient's email */
   email: string;
-  /** Patient's phone number */
-  telefono: string;
   /** Patient's password */
   clave: string;
 }

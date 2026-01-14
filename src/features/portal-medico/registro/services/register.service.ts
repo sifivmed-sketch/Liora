@@ -3,21 +3,13 @@ import { useStationStore } from "@/lib/stores/station.store";
 
 /**
  * Interface for the medical doctor registration request
- * Based on the API documentation structure from the second image
+ * Based on the API documentation structure
  */
 export interface RegisterDoctorRequest {
-  /** Doctor's username */
-  usuario: string;
-  /** Doctor's password */
-  clave: string;
-  /** Doctor's first name */
-  nombre: string;
-  /** Doctor's last name */
-  apellidos: string;
   /** Doctor's email */
   email: string;
-  /** Doctor's phone number */
-  telefono: string;
+  /** Doctor's password */
+  clave: string;
 }
 
 /**
@@ -176,22 +168,12 @@ export const getRegistrationErrorMessage = (
  * @returns RegisterDoctorRequest object
  */
 export const createRegisterDoctorRequest = (formData: {
-  name: string;
-  lastName: string;
   email: string;
-  phone: string;
   password: string;
 }): RegisterDoctorRequest => {
-  // Generate username from email (before @ symbol)
-  const username = formData.email.split("@")[0];
-
   return {
-    usuario: username,
-    clave: formData.password,
-    nombre: formData.name,
-    apellidos: formData.lastName,
     email: formData.email,
-    telefono: formData.phone,
+    clave: formData.password,
   };
 };
 

@@ -67,6 +67,8 @@ const LoginForm = () => {
 
       // Redirect using window.location to ensure middleware picks up the new cookie
       window.location.href = "/plataforma-salud/perfil";
+      // Keep the submit "loading" active until navigation happens
+      await new Promise<void>(() => {});
     } catch (error) {
       setLoginError(
         error instanceof Error

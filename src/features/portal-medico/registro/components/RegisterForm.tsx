@@ -1,20 +1,14 @@
 'use client';
 
 import Input from "@/components/Input";
-import Select, { SelectOption } from "@/components/Select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import {
   RegisterFormData,
   createRegisterSchema,
 } from "../schema/register.schema";
 import Link from "@/components/Link";
-import {
-  formatPhoneNumber,
-  handlePhoneKeyDown,
-  cleanPhoneNumber,
-} from "@/lib/utils/phone.utils";
 import {
   registerDoctor,
   createRegisterDoctorRequest,
@@ -37,7 +31,6 @@ const RegisterForm = () => {
     register,
     handleSubmit,
     formState: { errors },
-    control,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(createRegisterSchema(t)),
     defaultValues: {
@@ -45,35 +38,8 @@ const RegisterForm = () => {
       password: "",
       confirmPassword: "",
       email: "",
-      name: "",
-      lastName: "",
-      phone: "",
     },
   });
-
-  // Options for license type select
-  const licenseTypeOptions: SelectOption[] = [
-    { value: "general", label: t("license-type-general") },
-    { value: "specialist", label: t("license-type-specialist") },
-    { value: "resident", label: t("license-type-resident") },
-    { value: "intern", label: t("license-type-intern") },
-  ];
-
-  // Options for speciality select
-  const specialityOptions: SelectOption[] = [
-    { value: "cardiology", label: t("speciality-cardiology") },
-    { value: "dermatology", label: t("speciality-dermatology") },
-    { value: "endocrinology", label: t("speciality-endocrinology") },
-    { value: "gastroenterology", label: t("speciality-gastroenterology") },
-    { value: "internal-medicine", label: t("speciality-internal-medicine") },
-    { value: "neurology", label: t("speciality-neurology") },
-    { value: "oncology", label: t("speciality-oncology") },
-    { value: "pediatrics", label: t("speciality-pediatrics") },
-    { value: "psychiatry", label: t("speciality-psychiatry") },
-    { value: "radiology", label: t("speciality-radiology") },
-    { value: "surgery", label: t("speciality-surgery") },
-    { value: "other", label: t("speciality-other") },
-  ];
 
   /**
    * Handles form submission with proper error handling and loading states
@@ -86,14 +52,8 @@ const RegisterForm = () => {
     setApiError(null); // Clear previous errors
 
     try {
-      // Clean phone number: remove formatting characters, keep only digits
-      const cleanPhone = cleanPhoneNumber(data.phone);
-
       const request = createRegisterDoctorRequest({
-        name: data.name,
-        lastName: data.lastName,
         email: data.email,
-        phone: cleanPhone,
         password: data.password,
       });
 
@@ -103,17 +63,19 @@ const RegisterForm = () => {
         // Mark registration as successful and store user email
         markRegistrationSuccessful(data.email);
         // Redirect to success page with i18n support
+        // Keep loading state active during navigation
         router.push({ pathname: "/portal-medico/registro-exitoso" });
+        // Don't set isSubmitting to false here - let the component unmount during navigation
       } else {
         // Handle registration errors
         const errorMessage = result.errorMessage || t("registration-failed");
         setApiError(errorMessage);
+        setIsSubmitting(false);
       }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : t("unexpected-error");
       setApiError(errorMessage);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -125,96 +87,39 @@ const RegisterForm = () => {
       noValidate
       onSubmit={handleSubmit(onSubmit)}
     >
-      {/* Personal Information */}
-      <section>
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            {t("personal-information-title")}
-          </h2>
-          <p className="text-gray-600 text-sm">
-            {t("personal-information-description")}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 gap-6">
+        <Input
+          label={t("email")}
+          type="email"
+          placeholder={t("email-placeholder")}
+          required
+          registration={register("email")}
+          error={errors.email?.message}
+          autoComplete="email"
+          disabled={isSubmitting}
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Input
-            label={t("name")}
-            type="text"
-            placeholder={t("name-placeholder")}
-            required
-            registration={register("name")}
-            error={errors.name?.message}
-            autoComplete="name"
-            disabled={isSubmitting}
-          />
+        <Input
+          label={t("password")}
+          type="password"
+          placeholder={t("password-placeholder")}
+          required
+          registration={register("password")}
+          error={errors.password?.message}
+          helperText={t("password-helper-text")}
+          disabled={isSubmitting}
+        />
 
-          <Input
-            label={t("last-name")}
-            type="text"
-            placeholder={t("last-name-placeholder")}
-            required
-            registration={register("lastName")}
-            error={errors.lastName?.message}
-            autoComplete="family-name"
-            disabled={isSubmitting}
-          />
-
-          <Input
-            label={t("email")}
-            type="email"
-            placeholder={t("email-placeholder")}
-            required
-            registration={register("email")}
-            error={errors.email?.message}
-            autoComplete="email"
-            disabled={isSubmitting}
-          />
-
-          <Controller
-            name="phone"
-            control={control}
-            render={({ field }) => (
-              <Input
-                label={t("phone")}
-                type="tel"
-                placeholder="(000) 000-0000"
-                required
-                error={errors.phone?.message}
-                autoComplete="tel"
-                disabled={isSubmitting}
-                value={field.value || ""}
-                onChange={(e) => {
-                  const formatted = formatPhoneNumber(e.target.value);
-                  field.onChange(formatted);
-                }}
-                onKeyDown={handlePhoneKeyDown}
-                maxLength={14}
-              />
-            )}
-          />
-
-          <Input
-            label={t("password")}
-            type="password"
-            placeholder={t("password-placeholder")}
-            required
-            registration={register("password")}
-            error={errors.password?.message}
-            helperText={t("password-helper-text")}
-            disabled={isSubmitting}
-          />
-
-          <Input
-            label={t("confirm-password")}
-            type="password"
-            placeholder={t("confirm-password-placeholder")}
-            required
-            registration={register("confirmPassword")}
-            error={errors.confirmPassword?.message}
-            disabled={isSubmitting}
-          />
-        </div>
-      </section>
+        <Input
+          label={t("confirm-password")}
+          type="password"
+          placeholder={t("confirm-password-placeholder")}
+          required
+          registration={register("confirmPassword")}
+          error={errors.confirmPassword?.message}
+          disabled={isSubmitting}
+        />
+      </div>
 
       <div>
         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
