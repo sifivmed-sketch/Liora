@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import Input from '@/components/Input';
 import CustomSelect, { SelectOption } from '@/components/Select';
 import { fetchPatientProfile, isProfileFetchSuccessful, getProfileErrorMessage } from '../services/profile.service';
+import { formatIdentityCard, handleIdentityCardKeyDown } from '@/lib/utils/identity.utils';
 
 interface ProfilePersonalInfoFormProps {
   token: string;
@@ -16,7 +17,9 @@ interface PersonalInfoFormData {
   // Información Personal
   nombre: string;
   apellidos: string;
+  tipoIdentificacion: string;
   cedula: string;
+  pasaporte: string;
   email: string;
   sexo: string;
   fechaNacimiento: string;
@@ -24,7 +27,6 @@ interface PersonalInfoFormData {
   // Información de Ubicación
   telefonoSecundario: string;
   nacionalidad: string;
-  region: string;
   provincia: string;
   municipio: string;
   sector: string;
@@ -63,13 +65,16 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
     handleSubmit, 
     formState: { errors },
     watch,
-    reset
+    reset,
+    setValue
   } = useForm<PersonalInfoFormData>({
     defaultValues: {
       // Información Personal
       nombre: '',
       apellidos: '',
+      tipoIdentificacion: '',
       cedula: '',
+      pasaporte: '',
       email: '',
       sexo: '',
       fechaNacimiento: '',
@@ -77,7 +82,6 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
       // Información de Ubicación
       telefonoSecundario: '',
       nacionalidad: '',
-      region: '',
       provincia: '',
       municipio: '',
       sector: '',
@@ -152,6 +156,15 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
             const savedData: PersonalInfoFormData = JSON.parse(saved);
             // Si hay datos guardados en localStorage, usarlos
             console.log('Cargando datos desde localStorage');
+            // Asegurar que el tipo de identificación esté establecido si hay cédula o pasaporte
+            if (!savedData.tipoIdentificacion) {
+              if (savedData.cedula) {
+                savedData.tipoIdentificacion = 'Cedula';
+                savedData.cedula = formatIdentityCard(savedData.cedula.replace(/\D/g, ''));
+              } else if (savedData.pasaporte) {
+                savedData.tipoIdentificacion = 'Pasaporte';
+              }
+            }
             reset(savedData);
             setIsDirty(false);
             
@@ -174,10 +187,13 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
 
         if (isProfileFetchSuccessful(response)) {
           // Populate form with API data
+          const cedulaValue = response.Cedula || '';
           const apiData: Partial<PersonalInfoFormData> = {
             nombre: response.Nombre1 || '',
             apellidos: `${response.Apellido1 || ''} ${response.Apellido2 || ''}`.trim(),
-            cedula: response.Cedula || '',
+            tipoIdentificacion: cedulaValue ? 'Cedula' : '',
+            cedula: cedulaValue ? formatIdentityCard(cedulaValue) : '',
+            pasaporte: '',
             email: response.Email || '',
             telefonoPrincipal: response.Telefono1 || '',
             fechaNacimiento: response.Fecha_Nacimiento || '',
@@ -207,6 +223,20 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, idPaciente]);
+
+  // Watch tipoIdentificacion to clear the opposite field when it changes
+  const tipoIdentificacion = watch('tipoIdentificacion');
+  const isCedula = tipoIdentificacion === 'Cedula';
+  const isPasaporte = tipoIdentificacion === 'Pasaporte';
+
+  // Clear opposite field when tipoIdentificacion changes
+  useEffect(() => {
+    if (isCedula) {
+      setValue('pasaporte', '');
+    } else if (isPasaporte) {
+      setValue('cedula', '');
+    }
+  }, [tipoIdentificacion, isCedula, isPasaporte, setValue]);
 
   /**
    * Handles form cancellation
@@ -259,6 +289,12 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
       alert('Error al guardar el perfil');
     }
   };
+
+  const tipoIdentificacionOptions: SelectOption[] = [
+    { value: '', label: 'Seleccionar' },
+    { value: 'Cedula', label: 'Cédula' },
+    { value: 'Pasaporte', label: 'Pasaporte' },
+  ];
 
   const sexoOptions: SelectOption[] = [
     { value: '', label: 'Seleccionar' },
@@ -406,18 +442,54 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
               error={errors.apellidos?.message}
             />
 
-            {/* Cédula */}
-            <div className="relative">
-              <Input
-                label="Cédula"
-                required
-                placeholder="000-0000000-0"
-                registration={register('cedula')}
-                error={errors.cedula?.message}
-                disabled
+            {/* Tipo de Identificación */}
+            <Controller
+              name="tipoIdentificacion"
+              control={control}
+              render={({ field }) => (
+                <CustomSelect
+                  label="Tipo de Identificación"
+                  required
+                  placeholder="Seleccionar"
+                  options={tipoIdentificacionOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.tipoIdentificacion?.message}
+                />
+              )}
+            />
+
+            {/* Cédula o Pasaporte - Dynamic field */}
+            {isCedula && (
+              <Controller
+                name="cedula"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    label="Cédula"
+                    required
+                    placeholder="000-0000000-0"
+                    value={field.value}
+                    onChange={(e) => {
+                      const formatted = formatIdentityCard(e.target.value);
+                      field.onChange(formatted);
+                    }}
+                    onKeyDown={handleIdentityCardKeyDown}
+                    error={errors.cedula?.message}
+                  />
+                )}
               />
-              <p className="text-xs text-gray-500 mt-1 mx-1">La cédula no se puede cambiar</p>
-            </div>
+            )}
+
+            {isPasaporte && (
+              <Input
+                label="Pasaporte"
+                required
+                placeholder="Número de pasaporte"
+                registration={register('pasaporte')}
+                error={errors.pasaporte?.message}
+              />
+            )}
 
             {/* Email */}
             <Input
@@ -495,22 +567,6 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
               )}
             />
 
-            {/* Región */}
-            <Controller
-              name="region"
-              control={control}
-              render={({ field }) => (
-                <CustomSelect
-                  label="Región"
-                  placeholder="Seleccionar"
-                  options={[{ value: '', label: 'Seleccionar' }]}
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={errors.region?.message}
-                />
-              )}
-            />
-
             {/* Provincia */}
             <Controller
               name="provincia"
@@ -518,8 +574,8 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
               render={({ field }) => (
                 <CustomSelect
                   label="Provincia"
-                  placeholder="Seleccionar región primero"
-                  options={[{ value: '', label: 'Seleccionar región primero' }]}
+                  placeholder="Seleccionar"
+                  options={[{ value: '', label: 'Seleccionar' }]}
                   value={field.value}
                   onChange={field.onChange}
                   error={errors.provincia?.message}
