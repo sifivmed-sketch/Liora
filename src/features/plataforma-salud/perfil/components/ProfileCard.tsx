@@ -1,5 +1,7 @@
 'use client';
 
+import { useRouter } from '@/i18n/navigation';
+
 interface ProfileCardProps {
   userName: string;
   userEmail?: string;
@@ -24,6 +26,7 @@ const ProfileCard = ({
   plan = 'BÁSICO',
   lastVisit = '15 Oct 2024'
 }: ProfileCardProps) => {
+  const router = useRouter();
   
   /**
    * Gets initials from user name
@@ -48,10 +51,10 @@ const ProfileCard = ({
 
   /**
    * Handles medical profile button click
+   * Navigates to the medical profile page
    */
   const handleMedicalProfile = () => {
-    console.log('Ver perfil médico');
-    // TODO: Implement medical profile navigation
+    router.push({ pathname: '/plataforma-salud/perfil-medico' });
   };
 
   return (

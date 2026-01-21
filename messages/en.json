@@ -293,6 +293,77 @@
       "loading": "Loading information...",
       "error": "Error loading profile",
       "unexpected-error": "Unexpected error loading profile"
+    },
+    "medical-profile": {
+      "metadata": {
+        "title": "My Medical Profile - Health Platform",
+        "description": "Manage your medical information and control what data your doctors can see"
+      },
+      "header": {
+        "title": "My Medical Profile",
+        "description": "Manage your medical information and control what data your doctors can see",
+        "medical-info": "Medical information",
+        "configured": "Configured",
+        "doctors-authorized": "authorized doctors"
+      },
+      "breadcrumb": {
+        "dashboard": "Dashboard",
+        "my-profile": "My Profile",
+        "medical-profile": "Medical Profile"
+      },
+      "back-button": "Back to My Profile",
+      "sections": {
+        "allergies": {
+          "title": "Allergies",
+          "add-button": "Add",
+          "empty-message": "Add your allergies to keep your medical care safe",
+          "type-medication": "(Medication)",
+          "type-food": "(Food)",
+          "type-other": "(Other)"
+        },
+        "conditions": {
+          "title": "Medical Conditions",
+          "add-button": "Add",
+          "empty-message": "Keep your medical information updated",
+          "status-controlled": "(Controlled)",
+          "status-active": "(Active)"
+        },
+        "medications": {
+          "title": "Current Medications",
+          "add-button": "Add",
+          "empty-message": "List your current medications and dosages",
+          "frequency-once": "Once a day",
+          "frequency-twice": "Twice a day",
+          "frequency-three": "3 times a day",
+          "time-breakfast": "Breakfast",
+          "time-lunch": "Lunch",
+          "time-dinner": "Dinner"
+        },
+        "surgeries": {
+          "title": "Surgeries and Interventions",
+          "add-button": "Add",
+          "empty-message": "Record your surgeries and medical interventions"
+        }
+      },
+      "doctor-permissions": {
+        "title": "Doctor Access Control",
+        "add-doctor-button": "Authorize New Doctor",
+        "authorized-since": "Authorized since:",
+        "status-active": "Active",
+        "status-inactive": "Inactive",
+        "permissions": {
+          "basic-info": "Basic information",
+          "allergies": "Allergies",
+          "conditions": "Medical conditions",
+          "medications": "Medications",
+          "surgeries": "Surgeries",
+          "lab-results": "Lab results"
+        },
+        "preview-access": "Preview access view",
+        "permissions-active": "of {total} permissions active",
+        "specialty": "Specialty",
+        "clinic": "Clinic"
+      }
     }
   }
 }

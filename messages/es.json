@@ -293,6 +293,77 @@
       "loading": "Cargando información...",
       "error": "Error al cargar el perfil",
       "unexpected-error": "Error inesperado al cargar el perfil"
+    },
+    "medical-profile": {
+      "metadata": {
+        "title": "Mi Perfil Médico - Plataforma de Salud",
+        "description": "Gestiona tu información médica y controla qué datos pueden ver tus doctores"
+      },
+      "header": {
+        "title": "Mi Perfil Médico",
+        "description": "Gestiona tu información médica y controla qué datos pueden ver tus doctores",
+        "medical-info": "Información médica",
+        "configured": "Configurada",
+        "doctors-authorized": "doctores autorizados"
+      },
+      "breadcrumb": {
+        "dashboard": "Dashboard",
+        "my-profile": "Mi Perfil",
+        "medical-profile": "Perfil Médico"
+      },
+      "back-button": "Volver a Mi Perfil",
+      "sections": {
+        "allergies": {
+          "title": "Alergias",
+          "add-button": "Agregar",
+          "empty-message": "Agrega tus alergias para mantener segura tu atención médica",
+          "type-medication": "(Medicamento)",
+          "type-food": "(Alimento)",
+          "type-other": "(Otro)"
+        },
+        "conditions": {
+          "title": "Condiciones Médicas",
+          "add-button": "Agregar",
+          "empty-message": "Mantén actualizada tu información médica",
+          "status-controlled": "(Controlada)",
+          "status-active": "(Activa)"
+        },
+        "medications": {
+          "title": "Medicamentos Actuales",
+          "add-button": "Agregar",
+          "empty-message": "Lista tus medicamentos actuales y dosis",
+          "frequency-once": "1 vez al día",
+          "frequency-twice": "2 veces al día",
+          "frequency-three": "3 veces al día",
+          "time-breakfast": "Desayuno",
+          "time-lunch": "Almuerzo",
+          "time-dinner": "Cena"
+        },
+        "surgeries": {
+          "title": "Cirugías e Intervenciones",
+          "add-button": "Agregar",
+          "empty-message": "Registra tus cirugías e intervenciones médicas"
+        }
+      },
+      "doctor-permissions": {
+        "title": "Control de Acceso por Doctor",
+        "add-doctor-button": "Autorizar Nuevo Doctor",
+        "authorized-since": "Autorizado desde:",
+        "status-active": "Activo",
+        "status-inactive": "Inactivo",
+        "permissions": {
+          "basic-info": "Información básica",
+          "allergies": "Alergias",
+          "conditions": "Condiciones médicas",
+          "medications": "Medicamentos",
+          "surgeries": "Cirugías",
+          "lab-results": "Resultados de laboratorio"
+        },
+        "preview-access": "Ver vista previa de acceso",
+        "permissions-active": "de {total} permisos activos",
+        "specialty": "Especialidad",
+        "clinic": "Clínica"
+      }
     }
   }
 }
