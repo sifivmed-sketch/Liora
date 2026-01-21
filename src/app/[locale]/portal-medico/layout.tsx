@@ -24,7 +24,7 @@ export default function PortalMedicoLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <main className="portal-medico px-4">
+    <main className="portal-medico">
       {children}
     </main>
   );

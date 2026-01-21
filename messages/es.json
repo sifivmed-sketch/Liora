@@ -159,6 +159,97 @@
         "go-to-login": "Ir al Inicio de Sesión",
         "close": "Cerrar"
       }
+    },
+    "profile": {
+      "title": "Mi Perfil Profesional",
+      "description": "Gestiona tu información profesional médica y configuración",
+      "completion-label": "Perfil completado",
+      "loading": "Cargando información...",
+      "save": "Guardar Cambios",
+      "saving": "Guardando...",
+      "cancel": "Cancelar",
+      "save-success": "Perfil guardado exitosamente",
+      "save-error": "Error al guardar el perfil",
+      "default-name": "Dr. Médico",
+      "medical-specialist": "Médico Especialista",
+      "status": "Estado",
+      "status-active": "Activo",
+      "plan": "Plan",
+      "plan-professional": "Profesional",
+      "last-access": "Último acceso",
+      "today": "Hoy",
+      "change-photo": "Cambiar Foto",
+      "select-placeholder": "Seleccionar",
+      "verified": "Verificado",
+      "selected": "Seleccionado",
+      "missing-work-center": "Al menos un centro de trabajo activo",
+      "sections": {
+        "personal-info": "Información Personal",
+        "professional-credentials": "Credenciales Profesionales",
+        "work-centers": "Centros de Trabajo"
+      },
+      "fields": {
+        "gov-id": "Cédula de Identidad",
+        "gov-id-required": "La cédula es requerida",
+        "gov-id-format": "Formato: XXX-XXXXXXX-X",
+        "first-name": "Nombre",
+        "first-name-required": "El nombre es requerido",
+        "last-name": "Apellidos",
+        "last-name-required": "Los apellidos son requeridos",
+        "email": "Email Profesional",
+        "email-required": "El email es requerido",
+        "email-invalid": "Ingresa un email válido",
+        "email-note": "El email no se puede cambiar",
+        "phone": "Teléfono",
+        "phone-required": "El teléfono es requerido",
+        "license-number": "Número de Colegiado/Exequátur",
+        "license-number-required": "El número de colegiado/exequátur es requerido",
+        "specialty": "Especialidad",
+        "specialty-required": "La especialidad es requerida",
+        "license-type": "Tipo de Licencia",
+        "years-of-practice": "Años de Experiencia"
+      },
+      "specialties": {
+        "cardiologia": "Cardiología",
+        "medicina-interna": "Medicina Interna",
+        "pediatria": "Pediatría",
+        "ginecologia": "Ginecología",
+        "neurologia": "Neurología",
+        "traumatologia": "Traumatología"
+      },
+      "license-types": {
+        "exequatur": "Exequátur",
+        "colegio-medico": "Colegio Médico",
+        "licencia-especial": "Licencia Especial"
+      },
+      "available-centers": "Centros Médicos Disponibles",
+      "selected-centers": "Mis Centros Seleccionados",
+      "no-centers-selected": "No has seleccionado ningún centro médico",
+      "select-center-message": "Selecciona al menos un centro para poder atender pacientes",
+      "remove-center": "Remover {name}",
+      "alerts": {
+        "incomplete-credentials-title": "Credenciales incompletas",
+        "incomplete-credentials-description": "Completa tu información profesional para poder atender pacientes y acceder a todas las funcionalidades.",
+        "no-centers-title": "Sin centros de trabajo",
+        "no-centers-description": "Debes estar afiliado a al menos un centro médico para poder atender pacientes a través de la plataforma."
+      }
+    },
+    "dashboard": {
+      "header": {
+        "my-profile": "Mi Perfil",
+        "hello": "Hola",
+        "logout": "Salir"
+      },
+      "sidebar": {
+        "medical-panel": "Panel Médico",
+        "my-profile": "Mi Perfil",
+        "my-patients": "Mis Pacientes",
+        "appointments": "Citas Médicas",
+        "medical-centers": "Centros Médicos",
+        "configuration": "Configuración",
+        "settings": "Configuración",
+        "help": "Ayuda"
+      }
     }
   },
   "plataforma-salud": {

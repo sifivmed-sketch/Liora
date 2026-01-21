@@ -159,6 +159,97 @@
         "go-to-login": "Go to Login",
         "close": "Close"
       }
+    },
+    "profile": {
+      "title": "My Professional Profile",
+      "description": "Manage your medical professional information and settings",
+      "completion-label": "Profile completed",
+      "loading": "Loading information...",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "save-success": "Profile saved successfully",
+      "save-error": "Error saving profile",
+      "default-name": "Dr. Doctor",
+      "medical-specialist": "Medical Specialist",
+      "status": "Status",
+      "status-active": "Active",
+      "plan": "Plan",
+      "plan-professional": "Professional",
+      "last-access": "Last access",
+      "today": "Today",
+      "change-photo": "Change Photo",
+      "select-placeholder": "Select",
+      "verified": "Verified",
+      "selected": "Selected",
+      "missing-work-center": "At least one active work center",
+      "sections": {
+        "personal-info": "Personal Information",
+        "professional-credentials": "Professional Credentials",
+        "work-centers": "Work Centers"
+      },
+      "fields": {
+        "gov-id": "Identity Card",
+        "gov-id-required": "Identity card is required",
+        "gov-id-format": "Format: XXX-XXXXXXX-X",
+        "first-name": "First Name",
+        "first-name-required": "First name is required",
+        "last-name": "Last Name",
+        "last-name-required": "Last name is required",
+        "email": "Professional Email",
+        "email-required": "Email is required",
+        "email-invalid": "Enter a valid email",
+        "email-note": "Email cannot be changed",
+        "phone": "Phone",
+        "phone-required": "Phone is required",
+        "license-number": "License/Exequatur Number",
+        "license-number-required": "License number is required",
+        "specialty": "Specialty",
+        "specialty-required": "Specialty is required",
+        "license-type": "License Type",
+        "years-of-practice": "Years of Experience"
+      },
+      "specialties": {
+        "cardiologia": "Cardiology",
+        "medicina-interna": "Internal Medicine",
+        "pediatria": "Pediatrics",
+        "ginecologia": "Gynecology",
+        "neurologia": "Neurology",
+        "traumatologia": "Traumatology"
+      },
+      "license-types": {
+        "exequatur": "Exequatur",
+        "colegio-medico": "Medical College",
+        "licencia-especial": "Special License"
+      },
+      "available-centers": "Available Medical Centers",
+      "selected-centers": "My Selected Centers",
+      "no-centers-selected": "You have not selected any medical center",
+      "select-center-message": "Select at least one center to be able to treat patients",
+      "remove-center": "Remove {name}",
+      "alerts": {
+        "incomplete-credentials-title": "Incomplete credentials",
+        "incomplete-credentials-description": "Complete your professional information to be able to treat patients and access all features.",
+        "no-centers-title": "No work centers",
+        "no-centers-description": "You must be affiliated with at least one medical center to be able to treat patients through the platform."
+      }
+    },
+    "dashboard": {
+      "header": {
+        "my-profile": "My Profile",
+        "hello": "Hello",
+        "logout": "Logout"
+      },
+      "sidebar": {
+        "medical-panel": "Medical Panel",
+        "my-profile": "My Profile",
+        "my-patients": "My Patients",
+        "appointments": "Medical Appointments",
+        "medical-centers": "Medical Centers",
+        "configuration": "Configuration",
+        "settings": "Settings",
+        "help": "Help"
+      }
     }
   },
   "plataforma-salud": {
