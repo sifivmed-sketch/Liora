@@ -4,11 +4,17 @@ import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import Input from '@/components/Input';
 import CustomSelect, { SelectOption } from '@/components/Select';
-import { fetchPatientProfile, isProfileFetchSuccessful, getProfileErrorMessage } from '../services/profile.service';
+import { 
+  fetchPatientProfile, 
+  isProfileFetchSuccessful,
+  savePatientIdentificationContact,
+  savePatientLocationPersonal,
+  savePatientMedicalInfo
+} from '../services/profile.service';
 import { formatIdentityCard, handleIdentityCardKeyDown } from '@/lib/utils/identity.utils';
 
 interface ProfilePersonalInfoFormProps {
-  token: string;
+  sessionId: string;
   idPaciente: string;
   onProgressChange?: (progress: number) => void;
 }
@@ -27,8 +33,11 @@ interface PersonalInfoFormData {
   // Información de Ubicación
   telefonoSecundario: string;
   nacionalidad: string;
+  idNacionalidad?: number;
   provincia: string;
+  idProvincia?: string;
   municipio: string;
+  idMunicipio?: string;
   sector: string;
   direccion: string;
   // Información Adicional
@@ -39,6 +48,7 @@ interface PersonalInfoFormData {
   donante: string;
   nss: string;
   aseguradora: string;
+  idAseguradora?: number;
   numeroContrato: string;
   cedulaTitular: string;
   tipoPaciente: string;
@@ -50,14 +60,24 @@ interface PersonalInfoFormData {
 
 /**
  * Component for displaying and editing patient's personal information
- * @param token - Authentication token for API calls
+ * @param sessionId - Session ID from login for API calls
  * @param idPaciente - Patient ID from the session
  * @returns JSX element with personal information form
  */
-const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: ProfilePersonalInfoFormProps) => {
+const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: ProfilePersonalInfoFormProps) => {
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [initialData, setInitialData] = useState<PersonalInfoFormData | null>(null);
+
+  // Debug: Log props on mount
+  useEffect(() => {
+    console.log('=== ProfilePersonalInfoForm Props ===');
+    console.log('sessionId:', sessionId);
+    console.log('idPaciente:', idPaciente);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { 
     register, 
@@ -139,7 +159,42 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
   }, [watch, onProgressChange]);
 
   /**
-   * Loads patient profile data from localStorage or API
+   * Converts API date format to input date format (YYYY-MM-DD)
+   * @param dateString - Date string from API
+   * @returns Formatted date string (YYYY-MM-DD) or empty string
+   */
+  const convertApiDateToInputFormat = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    try {
+      console.log('Fecha recibida del API:', dateString);
+      
+      // Try to parse with Date object
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Fecha inválida:', dateString);
+        return '';
+      }
+      
+      // Format to YYYY-MM-DD
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      const formattedDate = `${year}-${month}-${day}`;
+      console.log('Fecha convertida:', formattedDate);
+      
+      return formattedDate;
+    } catch (error) {
+      console.error('Error convirtiendo fecha:', error);
+      return '';
+    }
+  };
+
+  /**
+   * Loads patient profile data from the API
    */
   useEffect(() => {
     const loadProfile = async () => {
@@ -147,73 +202,131 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
         setIsLoading(true);
         setApiError(null);
 
-        // Primero intentar cargar desde localStorage
-        try {
-          const key = `profile_${idPaciente}`;
-          const saved = localStorage.getItem(key);
-          
-          if (saved) {
-            const savedData: PersonalInfoFormData = JSON.parse(saved);
-            // Si hay datos guardados en localStorage, usarlos
-            console.log('Cargando datos desde localStorage');
-            // Asegurar que el tipo de identificación esté establecido si hay cédula o pasaporte
-            if (!savedData.tipoIdentificacion) {
-              if (savedData.cedula) {
-                savedData.tipoIdentificacion = 'Cedula';
-                savedData.cedula = formatIdentityCard(savedData.cedula.replace(/\D/g, ''));
-              } else if (savedData.pasaporte) {
-                savedData.tipoIdentificacion = 'Pasaporte';
-              }
-            }
-            reset(savedData);
-            setIsDirty(false);
-            
-            // Calculate and notify initial progress
-            const progress = calculateProgress(savedData);
-            if (onProgressChange) {
-              onProgressChange(progress);
-            }
-            
-            setIsLoading(false);
-            return;
-          }
-        } catch (localStorageError) {
-          console.error('Error al cargar desde localStorage:', localStorageError);
-        }
-
-        // Si no hay datos en localStorage, intentar cargar desde la API
         console.log('Cargando datos desde API');
-        const response = await fetchPatientProfile(token, idPaciente);
+        const response = await fetchPatientProfile(sessionId, idPaciente);
+
+        // Prepare form data from API responses
+        const apiData: PersonalInfoFormData = {
+          // Información Personal
+          nombre: '',
+          apellidos: '',
+          tipoIdentificacion: '',
+          cedula: '',
+          pasaporte: '',
+          email: '',
+          sexo: '',
+          fechaNacimiento: '',
+          telefonoPrincipal: '',
+          // Información de Ubicación
+          telefonoSecundario: '',
+          nacionalidad: '',
+          idNacionalidad: undefined,
+          provincia: '',
+          idProvincia: undefined,
+          municipio: '',
+          idMunicipio: undefined,
+          sector: '',
+          direccion: '',
+          // Información Adicional
+          estadoCivil: '',
+          profesion: '',
+          // Información Médica y de Seguro
+          tipoSangre: '',
+          donante: '',
+          nss: '',
+          aseguradora: '',
+          idAseguradora: undefined,
+          numeroContrato: '',
+          cedulaTitular: '',
+          tipoPaciente: '',
+          // Contacto de Emergencia
+          nombreEmergencia: '',
+          telefonoEmergencia: '',
+          relacionEmergencia: '',
+        };
 
         if (isProfileFetchSuccessful(response)) {
-          // Populate form with API data
-          const cedulaValue = response.Cedula || '';
-          const apiData: Partial<PersonalInfoFormData> = {
-            nombre: response.Nombre1 || '',
-            apellidos: `${response.Apellido1 || ''} ${response.Apellido2 || ''}`.trim(),
-            tipoIdentificacion: cedulaValue ? 'Cedula' : '',
-            cedula: cedulaValue ? formatIdentityCard(cedulaValue) : '',
-            pasaporte: '',
-            email: response.Email || '',
-            telefonoPrincipal: response.Telefono1 || '',
-            fechaNacimiento: response.Fecha_Nacimiento || '',
-          };
-          reset(apiData as PersonalInfoFormData);
-          setIsDirty(false);
+          const { identification, location, medical } = response;
           
-          // Calculate and notify initial progress
-          const progress = calculateProgress(apiData as PersonalInfoFormData);
-          if (onProgressChange) {
-            onProgressChange(progress);
+          console.log('Datos obtenidos de la API:', {
+            tieneIdentificacion: !!identification,
+            tieneUbicacion: !!location,
+            tieneMedica: !!medical
+          });
+          
+          // Identification and Contact data
+          if (identification) {
+            const nombre1 = identification.Nombre1 || '';
+            const nombre2 = identification.Nombre2 || '';
+            const apellido1 = identification.Apellido1 || '';
+            const apellido2 = identification.Apellido2 || '';
+            
+            apiData.nombre = nombre2 ? `${nombre1} ${nombre2}` : nombre1;
+            apiData.apellidos = apellido2 ? `${apellido1} ${apellido2}` : apellido1;
+            apiData.cedula = identification.Cedula ? formatIdentityCard(identification.Cedula) : '';
+            apiData.tipoIdentificacion = identification.Cedula ? 'Cedula' : '';
+            apiData.email = identification.Email || '';
+            apiData.telefonoPrincipal = identification.Telefono1 || '';
+            apiData.telefonoSecundario = identification.Telefono2 || '';
+            apiData.fechaNacimiento = convertApiDateToInputFormat(identification.Fecha_Nacimiento || '');
           }
           
-          // Nota: El resto de campos no vienen del API, quedarán vacíos
+          // Location and Personal data
+          if (location) {
+            apiData.sexo = location.Sexo || '';
+            apiData.nacionalidad = location.Nacionalidad || '';
+            apiData.idNacionalidad = location.IdNacionalidad;
+            apiData.estadoCivil = location.Estado_Civil || '';
+            apiData.profesion = location.Profesion || '';
+            apiData.direccion = location.Direccion || '';
+            apiData.sector = location.Sector || '';
+            apiData.municipio = location.Municipio || '';
+            apiData.idMunicipio = location.IdMunicipio || '';
+            apiData.provincia = location.Provincia || '';
+            apiData.idProvincia = location.IdProvincia || '';
+          }
+          
+          // Medical Information data
+          if (medical) {
+            apiData.nss = medical.Nss || '';
+            apiData.aseguradora = medical.Aseguradora || '';
+            apiData.idAseguradora = medical.IdAseguradora;
+            apiData.tipoSangre = medical.Tipo_Sangre || '';
+            apiData.donante = medical.Donante ? 'S' : 'N';
+          }
         } else {
-          const errorMessage = getProfileErrorMessage(response);
-          setApiError(errorMessage || 'Error al cargar el perfil');
+          // If no data from API (all sections returned 404), continue with empty form
+          console.log('No se encontró información del perfil - paciente nuevo o sin datos guardados');
+        }
+        
+        // Always set the data (either from API or empty)
+        const completeData = apiData as PersonalInfoFormData;
+        
+        console.log('=== DATOS PARA RESET ===');
+        console.log('completeData:', completeData);
+        console.log('Muestra de campos:', {
+          nombre: completeData.nombre,
+          apellidos: completeData.apellidos,
+          cedula: completeData.cedula,
+          email: completeData.email,
+          sexo: completeData.sexo,
+          fechaNacimiento: completeData.fechaNacimiento
+        });
+        
+        reset(completeData);
+        console.log('reset() ejecutado');
+        
+        setInitialData(completeData); // Store initial data for comparison
+        setIsDirty(false);
+        
+        // Calculate and notify initial progress
+        const progress = calculateProgress(completeData);
+        if (onProgressChange) {
+          onProgressChange(progress);
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Error inesperado al cargar el perfil';
+        console.error('Error loading profile:', errorMessage);
         setApiError(errorMessage);
       } finally {
         setIsLoading(false);
@@ -222,7 +335,7 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
 
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, idPaciente]);
+  }, [sessionId, idPaciente]);
 
   // Watch tipoIdentificacion to clear the opposite field when it changes
   const tipoIdentificacion = watch('tipoIdentificacion');
@@ -244,49 +357,186 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
   const handleCancel = () => {
     console.log('Cancelar cambios');
     
-    // Reload data from localStorage or API
-    try {
-      const key = `profile_${idPaciente}`;
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        const savedData: PersonalInfoFormData = JSON.parse(saved);
-        // Usar reset() para revertir los cambios y resetear el estado dirty
-        reset(savedData);
-      } else {
-        // Si no hay datos guardados, resetear a los valores por defecto
-        reset();
-      }
-    } catch (error) {
-      console.error('Error al cargar desde localStorage:', error);
-      reset();
+    // Restore initial data
+    if (initialData) {
+      reset(initialData);
+      setIsDirty(false);
     }
+  };
+
+  /**
+   * Converts input date format to API date format
+   * @param dateString - Date string from input (YYYY-MM-DD)
+   * @returns Formatted date string for API in ISO format (YYYY-MM-DD) that SQL Server can handle
+   */
+  const convertInputDateToApiFormat = (dateString: string): string => {
+    if (!dateString) return '';
     
-    setIsDirty(false);
+    try {
+      // Input format: YYYY-MM-DD (already in ISO format)
+      // SQL Server accepts ISO format (YYYY-MM-DD) without issues
+      // Just return as-is, SQL Server will handle the conversion
+      return dateString;
+    } catch (error) {
+      console.error('Error converting date for API:', error);
+      return '';
+    }
+  };
+
+  /**
+   * Determines which sections have changed
+   * @param currentData - Current form data
+   * @param initialData - Initial data from API
+   * @returns Object indicating which sections changed
+   */
+  const getChangedSections = (currentData: PersonalInfoFormData, initialData: PersonalInfoFormData) => {
+    const identificationFields = ['nombre', 'apellidos', 'cedula', 'pasaporte', 'tipoIdentificacion', 'email', 'fechaNacimiento', 'telefonoPrincipal', 'telefonoSecundario'];
+    const locationFields = ['sexo', 'nacionalidad', 'provincia', 'municipio', 'sector', 'direccion', 'estadoCivil', 'profesion'];
+    const medicalFields = ['tipoSangre', 'donante', 'nss', 'aseguradora'];
+    
+    const identificationChanged = identificationFields.some(field => 
+      currentData[field as keyof PersonalInfoFormData] !== initialData[field as keyof PersonalInfoFormData]
+    );
+    
+    const locationChanged = locationFields.some(field => 
+      currentData[field as keyof PersonalInfoFormData] !== initialData[field as keyof PersonalInfoFormData]
+    );
+    
+    const medicalChanged = medicalFields.some(field => 
+      currentData[field as keyof PersonalInfoFormData] !== initialData[field as keyof PersonalInfoFormData]
+    );
+    
+    return {
+      identification: identificationChanged,
+      location: locationChanged,
+      medical: medicalChanged
+    };
   };
 
   /**
    * Handles form submission
    * @param data - Form data to save
    */
-  const onSubmit = (data: PersonalInfoFormData) => {
+  const onSubmit = async (data: PersonalInfoFormData) => {
     console.log('Datos del formulario:', {
       seccion: 'Todas las secciones',
       datos: data
     });
     
-    // Guardar en localStorage
     try {
-      const key = `profile_${idPaciente}`;
-      localStorage.setItem(key, JSON.stringify(data));
-      console.log('Datos guardados en localStorage:', { key, data });
+      setIsSaving(true);
       
-      setIsDirty(false);
+      // Determine which sections changed (only if we have initialData)
+      const changedSections = initialData 
+        ? getChangedSections(data, initialData)
+        : { identification: true, location: true, medical: true }; // If no initialData, save everything
       
-      // Mostrar mensaje de éxito
-      alert('Perfil guardado exitosamente');
+      console.log('Secciones modificadas:', changedSections);
+      
+      const promises: Promise<{ Codigo: number; Mensaje: string }>[] = [];
+      
+      // Only save identification if it changed
+      if (changedSections.identification) {
+        // Split nombre into nombre1 and nombre2
+        const nombreParts = data.nombre.trim().split(' ');
+        const nombre1 = nombreParts[0] || '';
+        const nombre2 = nombreParts.slice(1).join(' ') || '';
+        
+        // Split apellidos into apellido1 and apellido2
+        const apellidoParts = data.apellidos.trim().split(' ');
+        const apellido1 = apellidoParts[0] || '';
+        const apellido2 = apellidoParts.slice(1).join(' ') || '';
+        
+        const identificationData = {
+          usuario: idPaciente,
+          cedula: data.cedula.replace(/\D/g, ''),
+          nombre1: nombre1,
+          nombre2: nombre2,
+          apellido1: apellido1,
+          apellido2: apellido2,
+          fechaNacimiento: convertInputDateToApiFormat(data.fechaNacimiento),
+          email: data.email,
+          telefono1: data.telefonoPrincipal,
+          telefono2: data.telefonoSecundario,
+          tipoRegistro: data.tipoIdentificacion === 'Cedula' ? 'Cedula' : 'Pasaporte',
+        };
+        
+        console.log('Guardando identificación:', identificationData);
+        promises.push(savePatientIdentificationContact(sessionId, identificationData));
+      }
+      
+      // Only save location if it changed
+      if (changedSections.location) {
+        const locationData = {
+          usuario: idPaciente,
+          sexo: data.sexo,
+          nacionalidad: data.idNacionalidad || 1,
+          estadoCivil: data.estadoCivil,
+          profesion: data.profesion,
+          direccion: data.direccion,
+          sector: data.sector,
+          municipio: data.municipio,
+          provincia: data.provincia,
+        };
+        
+        console.log('Guardando ubicación:', locationData);
+        promises.push(savePatientLocationPersonal(sessionId, locationData));
+      }
+      
+      // Only save medical if it changed
+      if (changedSections.medical) {
+        const medicalData = {
+          usuario: idPaciente,
+          nss: data.nss,
+          aseguradora: data.idAseguradora || 1,
+          tipoSangre: data.tipoSangre,
+          donante: data.donante === 'S' ? 1 : 0,
+        };
+        
+        console.log('Guardando información médica:', medicalData);
+        promises.push(savePatientMedicalInfo(sessionId, medicalData));
+      }
+      
+      if (promises.length === 0) {
+        alert('No hay cambios para guardar');
+        return;
+      }
+      
+      console.log(`Guardando ${promises.length} sección(es)...`);
+      
+      // Save only the changed sections
+      const results = await Promise.allSettled(promises);
+      
+      // Check if all requests were successful (API returns Codigo: 0 for success)
+      const allSuccessful = results.every(
+        (result) => result.status === 'fulfilled' && result.value.Codigo === 0
+      );
+      
+      if (allSuccessful) {
+        // Update initial data with new values
+        setInitialData(data);
+        setIsDirty(false);
+        alert('Perfil guardado exitosamente');
+      } else {
+        // Show error messages
+        const errors = results
+          .map((result, index) => {
+            if (result.status === 'rejected') {
+              return `Error en sección ${index + 1}: ${result.reason}`;
+            } else if (result.status === 'fulfilled' && result.value.Codigo !== 0) {
+              return result.value.Mensaje;
+            }
+            return null;
+          })
+          .filter(Boolean);
+        
+        alert(`Se guardaron algunos datos, pero hubo errores:\n${errors.join('\n')}`);
+      }
     } catch (error) {
-      console.error('Error al guardar en localStorage:', error);
-      alert('Error al guardar el perfil');
+      console.error('Error al guardar el perfil:', error);
+      alert('Error al guardar el perfil. Por favor, intenta de nuevo.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -396,11 +646,146 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
     { value: 'Amigo(a)', label: 'Amigo(a)' },
   ];
 
-  if (isLoading) {
+  if (isLoading && !isSaving) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-center p-8">
-          <div className="text-gray-600">Cargando información...</div>
+      <div className="space-y-6">
+        {/* Personal Information Skeleton */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-48 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-32"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-16"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-12"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-12"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-36"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-32"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Location Information Skeleton */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-56 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-32"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-24"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-16"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-36"></div>
+              <div className="h-20 bg-gray-100 rounded"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Information Skeleton */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-52 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-24"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Medical Information Skeleton */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 animate-pulse" style={{ borderLeft: '4px solid #2F80ED' }}>
+          <div className="h-6 bg-blue-100 rounded w-60 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-28"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-40"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-48"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-24"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-52"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-48"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-32"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Emergency Contact Skeleton */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 animate-pulse" style={{ borderLeft: '4px solid #dc2626' }}>
+          <div className="h-6 bg-red-100 rounded w-52 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-48"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-36"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+              <div className="h-11 bg-gray-100 rounded"></div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -834,7 +1219,8 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
           <button
             type="button"
             onClick={handleCancel}
-            className="min-h-[44px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 flex items-center gap-2"
+            disabled={isSaving}
+            className="min-h-[44px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -844,17 +1230,30 @@ const ProfilePersonalInfoForm = ({ token, idPaciente, onProgressChange }: Profil
           <button
             type="submit"
             onClick={handleSubmit(onSubmit)}
-            className="min-h-[44px] px-4 py-2 text-sm font-medium text-white rounded-lg hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 flex items-center gap-2"
+            disabled={isSaving}
+            className="min-h-[44px] px-4 py-2 text-sm font-medium text-white rounded-lg hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 flex items-center gap-2 disabled:opacity-75 disabled:cursor-wait disabled:hover:translate-y-0"
             style={{ 
               backgroundColor: '#2CA66F',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#248456'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2CA66F'}
+            onMouseEnter={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#248456')}
+            onMouseLeave={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#2CA66F')}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-            </svg>
-            Guardar Cambios
+            {isSaving ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Guardando...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Guardar Cambios
+              </>
+            )}
           </button>
         </div>
       )}

@@ -22,6 +22,7 @@ interface UserData {
   lastName: string;
   createdAt: string;
   lastLoginAt: string;
+  sessionId?: string;
 }
 
 /**
@@ -37,6 +38,7 @@ export const saveMedicalPortalSession = async (userData: UserData): Promise<void
     lastName: userData.lastName,
     createdAt: userData.createdAt,
     lastLoginAt: userData.lastLoginAt,
+    sessionId: userData.sessionId,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -65,6 +67,7 @@ export const saveHealthPlatformSession = async (userData: UserData): Promise<voi
     lastName: userData.lastName,
     createdAt: userData.createdAt,
     lastLoginAt: userData.lastLoginAt,
+    sessionId: userData.sessionId,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

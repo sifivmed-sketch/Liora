@@ -63,6 +63,7 @@ const LoginForm = () => {
         lastName: response.Apellidos,
         createdAt: response.Fecha_Creacion,
         lastLoginAt: response.Fecha_Ultimo_Acceso,
+        sessionId: response.Id_Sesion,
       });
 
       // Redirect using window.location to ensure middleware picks up the new cookie

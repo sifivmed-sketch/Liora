@@ -13,7 +13,7 @@ export async function getHealthPlatformSession () {
 
     try { 
         const verified = await jwtVerify(token, HEALTH_PLATFORM_SECRET);
-        return verified.payload as { id: string, email: string, name: string, lastName: string, createdAt: string, lastLoginAt: string };
+        return verified.payload as { id: string, email: string, name: string, lastName: string, createdAt: string, lastLoginAt: string, sessionId?: string };
     }catch { 
         return null
     }

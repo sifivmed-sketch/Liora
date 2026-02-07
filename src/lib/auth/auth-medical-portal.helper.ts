@@ -22,6 +22,7 @@ export async function getMedicalPortalSession() {
       lastName: string;
       createdAt: string;
       lastLoginAt: string;
+      sessionId?: string;
     };
   } catch {
     return null;

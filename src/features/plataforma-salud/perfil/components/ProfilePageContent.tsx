@@ -5,7 +5,7 @@ import ProfileCard from './ProfileCard';
 import ProfilePersonalInfoForm from './ProfilePersonalInfoForm';
 
 interface ProfilePageContentProps {
-  token: string;
+  sessionId: string;
   idPaciente: string;
   userName: string;
   userEmail: string;
@@ -14,14 +14,14 @@ interface ProfilePageContentProps {
 /**
  * Main profile page content component
  * Displays profile card on the left and forms on the right
- * @param token - Authentication token
+ * @param sessionId - Session ID from login
  * @param idPaciente - Patient ID from session
  * @param userName - User's full name
  * @param userEmail - User's email
  * @returns JSX element with complete profile page layout
  */
 const ProfilePageContent = ({ 
-  token, 
+  sessionId, 
   idPaciente, 
   userName, 
   userEmail 
@@ -91,7 +91,7 @@ const ProfilePageContent = ({
           {/* Right Column - Forms */}
           <div className="lg:col-span-8">
             <ProfilePersonalInfoForm 
-              token={token}
+              sessionId={sessionId}
               idPaciente={idPaciente}
               onProgressChange={handleProgressChange}
             />

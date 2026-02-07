@@ -2,48 +2,91 @@ import { API_BASE_URL, API_PATIENT_SEGMENT } from '@/lib/constants/api.constants
 import { useStationStore } from '@/lib/stores/station.store';
 
 /**
- * Interface for the patient profile data from API
+ * Interface for the patient identification and contact data from API
  * Based on the ConsultaFormularioIdentificacionContacto endpoint
  */
-export interface PatientProfileData {
+export interface PatientIdentificationContactData {
   Codigo: number;
   Mensaje: string;
-  IdPaciente: number | null;
-  Cedula: string | null;
-  Nombre1: string | null;
-  Nombre2: string | null;
-  Apellido1: string | null;
-  Apellido2: string | null;
-  Fecha_Nacimiento: string | null;
-  Email: string | null;
-  Telefono1: string | null;
-  Telefono2: string | null;
-  TipoRegistro: string | null;
+  IdPaciente: string;
+  Cedula: string;
+  Nombre1: string;
+  Nombre2: string;
+  Apellido1: string;
+  Apellido2: string;
+  Fecha_Nacimiento: string;
+  Email: string;
+  Telefono1: string;
+  Telefono2: string;
+  TipoRegistro: string;
+  Foto: string;
 }
 
 /**
- * Fetches the patient profile data from the API
- * @param token - The authentication token
- * @param idPaciente - The patient ID from the session
- * @returns Promise with the profile data
- * @throws Error if the API call fails
+ * Interface for the patient location and personal information data from API
+ * Based on the ConsultaFormularioLocalizacionInformacionPersonal endpoint
  */
-export const fetchPatientProfile = async (
-  token: string,
+export interface PatientLocationPersonalData {
+  Codigo: number;
+  Mensaje: string;
+  IdPaciente: string;
+  Sexo: string;
+  IdNacionalidad: number;
+  Nacionalidad: string;
+  Estado_Civil: string;
+  Profesion: string;
+  Direccion: string;
+  Sector: string;
+  IdMunicipio: string;
+  Municipio: string;
+  IdProvincia: string;
+  Provincia: string;
+}
+
+/**
+ * Interface for the patient medical information data from API
+ * Based on the ConsultaFormularioInformacionMedica endpoint
+ */
+export interface PatientMedicalInfoData {
+  Codigo: number;
+  Mensaje: string;
+  IdPaciente: string;
+  Nss: string;
+  IdAseguradora: number;
+  Aseguradora: string;
+  Tipo_Sangre: string;
+  Donante: boolean;
+}
+
+/**
+ * Combined patient profile data
+ */
+export interface PatientProfileData {
+  identification: PatientIdentificationContactData | null;
+  location: PatientLocationPersonalData | null;
+  medical: PatientMedicalInfoData | null;
+}
+
+/**
+ * Fetches patient identification and contact data from the API
+ * @param sessionId - The session ID from login (not used in GET endpoints)
+ * @param idPaciente - The patient ID from the session
+ * @returns Promise with the identification and contact data
+ */
+export const fetchPatientIdentificationContact = async (
+  sessionId: string,
   idPaciente: string
-): Promise<PatientProfileData> => {
+): Promise<PatientIdentificationContactData | null> => {
   if (!API_BASE_URL) {
     throw new Error('API_BASE_URL is not configured');
   }
 
-  // Get station ID from Zustand store
   const stationId = useStationStore.getState().idUnico;
   
   if (!stationId) {
     throw new Error('Station ID is not available. Please ensure the station is initialized.');
   }
 
-  // Add idPaciente as query parameter
   const endpoint = `${API_BASE_URL}/${API_PATIENT_SEGMENT}/ConsultaFormularioIdentificacionContacto?idPaciente=${encodeURIComponent(idPaciente)}`;
 
   try {
@@ -53,50 +96,343 @@ export const fetchPatientProfile = async (
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'equipo': stationId,
-        'Authorization': `Bearer ${token}`,
       },
     });
 
-    // If 404, return empty data (patient profile not found yet)
+    // 404 is normal - means no data saved yet for this section
     if (response.status === 404) {
-      return {
-        Codigo: 0,
-        Mensaje: 'Perfil no encontrado',
-        IdPaciente: null,
-        Cedula: null,
-        Nombre1: null,
-        Nombre2: null,
-        Apellido1: null,
-        Apellido2: null,
-        Fecha_Nacimiento: null,
-        Email: null,
-        Telefono1: null,
-        Telefono2: null,
-        TipoRegistro: null,
-      };
+      console.log('No se encontró información de identificación (404 - aún no guardada)');
+      return null;
     }
 
-    let data: PatientProfileData;
-    try {
-      data = await response.json();
-    } catch {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    if (!response.ok) {
+    const data: PatientIdentificationContactData = await response.json();
+    
+    // API returns Codigo: 0 for success
+    if (data.Codigo === 0) {
       return data;
     }
-
-    return data;
+    
+    console.log('Respuesta de identificación no exitosa:', data);
+    return null;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('HTTP error')) {
-      throw error;
+    console.error('Error fetching identification contact data:', error);
+    return null;
+  }
+};
+
+/**
+ * Fetches patient location and personal information data from the API
+ * @param sessionId - The session ID from login (not used in GET endpoints)
+ * @param idPaciente - The patient ID from the session
+ * @returns Promise with the location and personal information data
+ */
+export const fetchPatientLocationPersonal = async (
+  sessionId: string,
+  idPaciente: string
+): Promise<PatientLocationPersonalData | null> => {
+  if (!API_BASE_URL) {
+    throw new Error('API_BASE_URL is not configured');
+  }
+
+  const stationId = useStationStore.getState().idUnico;
+  
+  if (!stationId) {
+    throw new Error('Station ID is not available. Please ensure the station is initialized.');
+  }
+
+  const endpoint = `${API_BASE_URL}/${API_PATIENT_SEGMENT}/ConsultaFormularioLocalizacionInformacionPersonal?idPaciente=${encodeURIComponent(idPaciente)}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'equipo': stationId,
+      },
+    });
+
+    // 404 is normal - means no data saved yet for this section
+    if (response.status === 404) {
+      console.log('No se encontró información de ubicación (404 - aún no guardada)');
+      return null;
+    }
+
+    const data: PatientLocationPersonalData = await response.json();
+    
+    // API returns Codigo: 0 for success
+    if (data.Codigo === 0) {
+      return data;
     }
     
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch patient profile: ${error.message}`);
+    console.log('Respuesta de ubicación no exitosa:', data);
+    return null;
+  } catch (error) {
+    console.error('Error fetching location personal data:', error);
+    return null;
+  }
+};
+
+/**
+ * Fetches patient medical information data from the API
+ * @param sessionId - The session ID from login (not used in GET endpoints)
+ * @param idPaciente - The patient ID from the session
+ * @returns Promise with the medical information data
+ */
+export const fetchPatientMedicalInfo = async (
+  sessionId: string,
+  idPaciente: string
+): Promise<PatientMedicalInfoData | null> => {
+  if (!API_BASE_URL) {
+    throw new Error('API_BASE_URL is not configured');
+  }
+
+  const stationId = useStationStore.getState().idUnico;
+  
+  if (!stationId) {
+    throw new Error('Station ID is not available. Please ensure the station is initialized.');
+  }
+
+  const endpoint = `${API_BASE_URL}/${API_PATIENT_SEGMENT}/ConsultaFormularioInformacionMedica?idPaciente=${encodeURIComponent(idPaciente)}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'equipo': stationId,
+      },
+    });
+
+    // 404 is normal - means no data saved yet for this section
+    if (response.status === 404) {
+      console.log('No se encontró información médica (404 - aún no guardada)');
+      return null;
     }
-    throw new Error('Unknown error occurred while fetching patient profile');
+
+    const data: PatientMedicalInfoData = await response.json();
+    
+    // API returns Codigo: 0 for success
+    if (data.Codigo === 0) {
+      return data;
+    }
+    
+    console.log('Respuesta de información médica no exitosa:', data);
+    return null;
+  } catch (error) {
+    console.error('Error fetching medical info data:', error);
+    return null;
+  }
+};
+
+/**
+ * Fetches the complete patient profile data from all API endpoints
+ * @param sessionId - The session ID from login
+ * @param idPaciente - The patient ID from the session
+ * @returns Promise with the complete profile data
+ */
+export const fetchPatientProfile = async (
+  sessionId: string,
+  idPaciente: string
+): Promise<PatientProfileData> => {
+  const [identification, location, medical] = await Promise.all([
+    fetchPatientIdentificationContact(sessionId, idPaciente),
+    fetchPatientLocationPersonal(sessionId, idPaciente),
+    fetchPatientMedicalInfo(sessionId, idPaciente),
+  ]);
+
+  return {
+    identification,
+    location,
+    medical,
+  };
+};
+
+/**
+ * Saves patient identification and contact data to the API
+ * @param sessionId - The session ID from login
+ * @param data - The identification and contact data to save
+ * @returns Promise with the response
+ */
+export const savePatientIdentificationContact = async (
+  sessionId: string,
+  data: {
+    usuario: string;
+    cedula: string;
+    nombre1: string;
+    nombre2: string;
+    apellido1: string;
+    apellido2: string;
+    fechaNacimiento: string;
+    email: string;
+    telefono1: string;
+    telefono2: string;
+    tipoRegistro: string;
+  }
+): Promise<{ Codigo: number; Mensaje: string }> => {
+  if (!API_BASE_URL) {
+    throw new Error('API_BASE_URL is not configured');
+  }
+
+  const stationId = useStationStore.getState().idUnico;
+  
+  if (!stationId) {
+    throw new Error('Station ID is not available. Please ensure the station is initialized.');
+  }
+
+  const endpoint = `${API_BASE_URL}/${API_PATIENT_SEGMENT}/RegistrarFormularioIdentificacionContacto`;
+
+  console.log('=== savePatientIdentificationContact ===');
+  console.log('sessionId:', sessionId);
+  console.log('stationId:', stationId);
+  console.log('endpoint:', endpoint);
+  console.log('data:', data);
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'equipo': stationId,
+      'id_sesion': sessionId,
+    };
+    
+    console.log('headers:', headers);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    console.log('response:', result);
+    return result;
+  } catch (error) {
+    console.error('Error saving identification contact data:', error);
+    throw error;
+  }
+};
+
+/**
+ * Saves patient location and personal information data to the API
+ * @param sessionId - The session ID from login
+ * @param data - The location and personal information data to save
+ * @returns Promise with the response
+ */
+export const savePatientLocationPersonal = async (
+  sessionId: string,
+  data: {
+    usuario: string;
+    sexo: string;
+    nacionalidad: number;
+    estadoCivil: string;
+    profesion: string;
+    direccion: string;
+    sector: string;
+    municipio: string;
+    provincia: string;
+  }
+): Promise<{ Codigo: number; Mensaje: string }> => {
+  if (!API_BASE_URL) {
+    throw new Error('API_BASE_URL is not configured');
+  }
+
+  const stationId = useStationStore.getState().idUnico;
+  
+  if (!stationId) {
+    throw new Error('Station ID is not available. Please ensure the station is initialized.');
+  }
+
+  const endpoint = `${API_BASE_URL}/${API_PATIENT_SEGMENT}/RegistrarFormularioLocalizacionInformacionPersonal`;
+
+  console.log('=== savePatientLocationPersonal ===');
+  console.log('sessionId:', sessionId);
+  console.log('stationId:', stationId);
+  console.log('endpoint:', endpoint);
+  console.log('data:', data);
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'equipo': stationId,
+      'id_sesion': sessionId,
+    };
+    
+    console.log('headers:', headers);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    console.log('response:', result);
+    return result;
+  } catch (error) {
+    console.error('Error saving location personal data:', error);
+    throw error;
+  }
+};
+
+/**
+ * Saves patient medical information data to the API
+ * @param sessionId - The session ID from login
+ * @param data - The medical information data to save
+ * @returns Promise with the response
+ */
+export const savePatientMedicalInfo = async (
+  sessionId: string,
+  data: {
+    usuario: string;
+    nss: string;
+    aseguradora: number;
+    tipoSangre: string;
+    donante: number;
+  }
+): Promise<{ Codigo: number; Mensaje: string }> => {
+  if (!API_BASE_URL) {
+    throw new Error('API_BASE_URL is not configured');
+  }
+
+  const stationId = useStationStore.getState().idUnico;
+  
+  if (!stationId) {
+    throw new Error('Station ID is not available. Please ensure the station is initialized.');
+  }
+
+  const endpoint = `${API_BASE_URL}/${API_PATIENT_SEGMENT}/RegistrarFormularioInformacionMedica`;
+
+  console.log('=== savePatientMedicalInfo ===');
+  console.log('sessionId:', sessionId);
+  console.log('stationId:', stationId);
+  console.log('endpoint:', endpoint);
+  console.log('data:', data);
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'equipo': stationId,
+      'id_sesion': sessionId,
+    };
+    
+    console.log('headers:', headers);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    console.log('response:', result);
+    return result;
+  } catch (error) {
+    console.error('Error saving medical info data:', error);
+    throw error;
   }
 };
 
@@ -106,7 +442,7 @@ export const fetchPatientProfile = async (
  * @returns True if fetch was successful, false otherwise
  */
 export const isProfileFetchSuccessful = (response: PatientProfileData): boolean => {
-  return response.Codigo === 0;
+  return !!(response.identification || response.location || response.medical);
 };
 
 /**
@@ -119,7 +455,7 @@ export const getProfileErrorMessage = (response: PatientProfileData): string | n
     return null;
   }
   
-  return response.Mensaje || 'Failed to fetch profile. Please try again.';
+  return 'No se pudo cargar el perfil. Por favor, intenta de nuevo.';
 };
 
 // Export types for use in components

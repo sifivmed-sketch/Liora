@@ -10,9 +10,11 @@ export default async function PerfilPage() {
     return notFound();
   }
 
-  // Get the token from cookies
-  const cookieStore = await cookies();
-  const token = cookieStore.get("health_platform_session")?.value || "";
+  // Debug: Log session data
+  console.log('=== PerfilPage Session ===');
+  console.log('session:', session);
+  console.log('session.sessionId:', session.sessionId);
+  console.log('session.id:', session.id);
 
   // Get user's full name
   const userName =
@@ -21,7 +23,7 @@ export default async function PerfilPage() {
 
   return (
     <ProfilePageContent
-      token={token}
+      sessionId={session.sessionId || ""}
       idPaciente={session.id}
       userName={userName}
       userEmail={session.email}
