@@ -42,6 +42,10 @@ export const routing = defineRouting({
             'es': '/plataforma-salud/perfil-medico',
             'en': '/health-platform/medical-profile',
         },
+        '/plataforma-salud/citas': { 
+            'es': '/plataforma-salud/citas',
+            'en': '/medical-portal/appointments',
+        },
         '/plataforma-salud': { 
             'es': '/plataforma-salud',
             'en': '/health-platform',

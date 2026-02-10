@@ -43,8 +43,8 @@ const ProfilePageContent = ({
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Mi Perfil</h1>
-              <p className="text-gray-600 text-sm lg:text-base">Gestiona tu información personal y configuración del sistema</p>
+              <h1 className="text-2xl font-bold text-gray-900">Mi Perfil</h1>
+              <p className="text-gray-600 mt-1">Gestiona tu información personal y configuración del sistema</p>
             </div>
             
             {/* Profile completion */}

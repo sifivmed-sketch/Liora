@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import Link from '@/components/Link';
 import Logo from '@/components/Logo';
 import MedicalCard from '@/components/MedicalCard';
@@ -55,12 +56,12 @@ const RegisterSuccessContent = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      alert(t('resend-success'));
+      toast.success(t('resend-success'));
       
       // Do NOT clear registration success state here
       // User can continue to stay on success page and re-send if needed
     } catch {
-      alert(t('resend-error'));
+      toast.error(t('resend-error'));
     } finally {
       setIsResending(false);
     }

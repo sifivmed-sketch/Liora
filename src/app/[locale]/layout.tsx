@@ -3,6 +3,7 @@ import { Open_Sans, Montserrat } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { hasLocale } from "next-intl";
 import { StationProvider } from "@/components/providers/StationProvider";
+import { Toaster } from "sonner";
 import "@/styles/globals.css"; 
 import { routing } from "@/i18n/routing";
 import { notFound } from "next/navigation";
@@ -47,6 +48,7 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider messages={messages}>
           <StationProvider>{children}</StationProvider>
+          <Toaster />
         </NextIntlClientProvider>
       </body>
     </html>

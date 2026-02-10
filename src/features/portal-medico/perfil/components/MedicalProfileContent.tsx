@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import Input from '@/components/Input';
 import CustomSelect, { SelectOption } from '@/components/Select';
 import { formatIdentityCard, handleIdentityCardKeyDown } from '@/lib/utils/identity.utils';
@@ -290,10 +291,10 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
       setIsDirty(false);
       
       // Show success message
-      alert(t('save-success'));
+      toast.success(t('save-success'));
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert(t('save-error'));
+      toast.error(t('save-error'));
     } finally {
       setIsSaving(false);
     }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import { toast } from 'sonner';
 import Input from '@/components/Input';
 import CustomSelect, { SelectOption } from '@/components/Select';
 import { 
@@ -583,7 +584,7 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
       }
       
       if (promises.length === 0) {
-        alert('No hay cambios para guardar');
+        toast.info('No hay cambios para guardar');
         return;
       }
       
@@ -601,7 +602,7 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
         // Update initial data with new values
         setInitialData(data);
         setIsDirty(false);
-        alert('Perfil guardado exitosamente');
+        toast.success('Perfil guardado exitosamente');
       } else {
         // Show error messages
         const errors = results
@@ -615,11 +616,11 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
           })
           .filter(Boolean);
         
-        alert(`Se guardaron algunos datos, pero hubo errores:\n${errors.join('\n')}`);
+        toast.error(`Se guardaron algunos datos, pero hubo errores: ${errors.join(', ')}`);
       }
     } catch (error) {
       console.error('Error al guardar el perfil:', error);
-      alert('Error al guardar el perfil. Por favor, intenta de nuevo.');
+      toast.error('Error al guardar el perfil. Por favor, intenta de nuevo.');
     } finally {
       setIsSaving(false);
     }
