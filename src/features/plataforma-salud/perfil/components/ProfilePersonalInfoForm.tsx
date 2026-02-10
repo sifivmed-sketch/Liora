@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import Input from '@/components/Input';
 import CustomSelect, { SelectOption } from '@/components/Select';
@@ -9,7 +9,9 @@ import {
   isProfileFetchSuccessful,
   savePatientIdentificationContact,
   savePatientLocationPersonal,
-  savePatientMedicalInfo
+  savePatientMedicalInfo,
+  fetchProvinces,
+  fetchMunicipalities
 } from '../services/profile.service';
 import { formatIdentityCard, handleIdentityCardKeyDown } from '@/lib/utils/identity.utils';
 
@@ -70,6 +72,10 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
   const [apiError, setApiError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [initialData, setInitialData] = useState<PersonalInfoFormData | null>(null);
+  const [provinces, setProvinces] = useState<SelectOption[]>([]);
+  const [municipalities, setMunicipalities] = useState<SelectOption[]>([]);
+  const [isLoadingMunicipalities, setIsLoadingMunicipalities] = useState(false);
+  const isInitialLoadRef = useRef(true);
 
   // Debug: Log props on mount
   useEffect(() => {
@@ -152,8 +158,10 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
         onProgressChange(progress);
       }
       
-      // Set dirty state only on user changes
-      setIsDirty(true);
+      // Set dirty state only on user changes (not during initial load)
+      if (!isInitialLoadRef.current) {
+        setIsDirty(true);
+      }
     });
     return () => subscription.unsubscribe();
   }, [watch, onProgressChange]);
@@ -282,8 +290,9 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
             apiData.sector = location.Sector || '';
             apiData.municipio = location.Municipio || '';
             apiData.idMunicipio = location.IdMunicipio || '';
-            apiData.provincia = location.Provincia || '';
+            // Use IdProvincia as the value for provincia select (it will show the name)
             apiData.idProvincia = location.IdProvincia || '';
+            apiData.provincia = location.Provincia || ''; // Keep name for display/backup
           }
           
           // Medical Information data
@@ -324,10 +333,17 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
         if (onProgressChange) {
           onProgressChange(progress);
         }
+        
+        // If no province is selected, mark initial load as complete immediately
+        // Otherwise, it will be marked complete after municipalities load
+        if (!completeData.idProvincia) {
+          isInitialLoadRef.current = false;
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Error inesperado al cargar el perfil';
         console.error('Error loading profile:', errorMessage);
         setApiError(errorMessage);
+        isInitialLoadRef.current = false;
       } finally {
         setIsLoading(false);
       }
@@ -336,6 +352,73 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, idPaciente]);
+
+  /**
+   * Loads provinces from API on mount
+   */
+  useEffect(() => {
+    const loadProvinces = async () => {
+      try {
+        const provincesData = await fetchProvinces();
+        const provinceOptions: SelectOption[] = [
+          { value: '', label: 'Seleccionar' },
+          ...provincesData.map((province: { Id: string; Nombre: string }) => ({
+            value: province.Id,
+            label: province.Nombre
+          }))
+        ];
+        setProvinces(provinceOptions);
+      } catch (error) {
+        console.error('Error loading provinces:', error);
+      }
+    };
+
+    loadProvinces();
+  }, []);
+
+  // Watch idProvincia to load municipalities when it changes
+  const idProvincia = watch('idProvincia');
+
+  /**
+   * Loads municipalities when province changes
+   */
+  useEffect(() => {
+    const loadMunicipalities = async () => {
+      if (!idProvincia) {
+        setMunicipalities([{ value: '', label: 'Seleccionar provincia primero' }]);
+        return;
+      }
+
+      try {
+        setIsLoadingMunicipalities(true);
+        const municipalitiesData = await fetchMunicipalities(idProvincia);
+        const municipalityOptions: SelectOption[] = [
+          { value: '', label: 'Seleccionar' },
+          ...municipalitiesData.map((municipality: { Id: string; Nombre: string }) => ({
+            value: municipality.Id,
+            label: municipality.Nombre
+          }))
+        ];
+        setMunicipalities(municipalityOptions);
+        
+        // Mark initial load as complete after municipalities are loaded
+        if (isInitialLoadRef.current) {
+          isInitialLoadRef.current = false;
+        }
+      } catch (error) {
+        console.error('Error loading municipalities:', error);
+        setMunicipalities([{ value: '', label: 'Error al cargar municipios' }]);
+        // Mark initial load as complete even on error
+        if (isInitialLoadRef.current) {
+          isInitialLoadRef.current = false;
+        }
+      } finally {
+        setIsLoadingMunicipalities(false);
+      }
+    };
+
+    loadMunicipalities();
+  }, [idProvincia]);
 
   // Watch tipoIdentificacion to clear the opposite field when it changes
   const tipoIdentificacion = watch('tipoIdentificacion');
@@ -391,16 +474,18 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
    */
   const getChangedSections = (currentData: PersonalInfoFormData, initialData: PersonalInfoFormData) => {
     const identificationFields = ['nombre', 'apellidos', 'cedula', 'pasaporte', 'tipoIdentificacion', 'email', 'fechaNacimiento', 'telefonoPrincipal', 'telefonoSecundario'];
-    const locationFields = ['sexo', 'nacionalidad', 'provincia', 'municipio', 'sector', 'direccion', 'estadoCivil', 'profesion'];
+    const locationFields = ['sexo', 'nacionalidad', 'sector', 'direccion', 'estadoCivil', 'profesion'];
     const medicalFields = ['tipoSangre', 'donante', 'nss', 'aseguradora'];
     
     const identificationChanged = identificationFields.some(field => 
       currentData[field as keyof PersonalInfoFormData] !== initialData[field as keyof PersonalInfoFormData]
     );
     
+    // Check location fields including province and municipality IDs
     const locationChanged = locationFields.some(field => 
       currentData[field as keyof PersonalInfoFormData] !== initialData[field as keyof PersonalInfoFormData]
-    );
+    ) || currentData.idProvincia !== initialData.idProvincia 
+    || currentData.idMunicipio !== initialData.idMunicipio;
     
     const medicalChanged = medicalFields.some(field => 
       currentData[field as keyof PersonalInfoFormData] !== initialData[field as keyof PersonalInfoFormData]
@@ -475,8 +560,8 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
           profesion: data.profesion,
           direccion: data.direccion,
           sector: data.sector,
-          municipio: data.municipio,
-          provincia: data.provincia,
+          municipio: data.idMunicipio || '',
+          provincia: data.idProvincia || '',
         };
         
         console.log('Guardando ubicación:', locationData);
@@ -954,15 +1039,25 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
 
             {/* Provincia */}
             <Controller
-              name="provincia"
+              name="idProvincia"
               control={control}
               render={({ field }) => (
                 <CustomSelect
                   label="Provincia"
                   placeholder="Seleccionar"
-                  options={[{ value: '', label: 'Seleccionar' }]}
-                  value={field.value}
-                  onChange={field.onChange}
+                  options={provinces}
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    // Find province name from ID and update provincia field
+                    const selectedProvince = provinces.find(p => p.value === value);
+                    if (selectedProvince) {
+                      setValue('provincia', selectedProvince.label);
+                    }
+                    // Clear municipio when province changes
+                    setValue('municipio', '');
+                    setValue('idMunicipio', undefined);
+                  }}
                   error={errors.provincia?.message}
                 />
               )}
@@ -970,15 +1065,22 @@ const ProfilePersonalInfoForm = ({ sessionId, idPaciente, onProgressChange }: Pr
 
             {/* Municipio */}
             <Controller
-              name="municipio"
+              name="idMunicipio"
               control={control}
               render={({ field }) => (
                 <CustomSelect
                   label="Municipio"
-                  placeholder="Seleccionar provincia primero"
-                  options={[{ value: '', label: 'Seleccionar provincia primero' }]}
-                  value={field.value}
-                  onChange={field.onChange}
+                  placeholder={isLoadingMunicipalities ? "Cargando..." : "Seleccionar provincia primero"}
+                  options={municipalities}
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    // Find municipality name from ID and update municipio field
+                    const selectedMunicipality = municipalities.find(m => m.value === value);
+                    if (selectedMunicipality) {
+                      setValue('municipio', selectedMunicipality.label);
+                    }
+                  }}
                   error={errors.municipio?.message}
                 />
               )}

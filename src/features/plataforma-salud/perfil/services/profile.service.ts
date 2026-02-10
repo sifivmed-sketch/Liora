@@ -1,4 +1,4 @@
-import { API_BASE_URL, API_PATIENT_SEGMENT } from '@/lib/constants/api.constants';
+import { API_BASE_URL, API_PATIENT_SEGMENT, API_GENERAL_SEGMENT } from '@/lib/constants/api.constants';
 import { useStationStore } from '@/lib/stores/station.store';
 
 /**
@@ -461,3 +461,112 @@ export const getProfileErrorMessage = (response: PatientProfileData): string | n
 // Export types for use in components
 export type { PatientProfileData as ProfileData };
 
+/**
+ * Interface for province/municipality data from API
+ */
+export interface LocationOption {
+  Id: string;
+  Nombre: string;
+}
+
+/**
+ * Interface for provinces/municipalities API response
+ */
+export interface LocationResponse {
+  Codigo: number;
+  Mensaje: string;
+  Data: LocationOption[];
+}
+
+/**
+ * Fetches all provinces from the API
+ * @returns Promise with array of provinces
+ */
+export const fetchProvinces = async (): Promise<LocationOption[]> => {
+  if (!API_BASE_URL) {
+    throw new Error('API_BASE_URL is not configured');
+  }
+
+  const stationId = useStationStore.getState().idUnico;
+  
+  if (!stationId) {
+    throw new Error('Station ID is not available. Please ensure the station is initialized.');
+  }
+
+  const endpoint = `${API_BASE_URL}/${API_GENERAL_SEGMENT}/ConsultaProvincias`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'equipo': stationId,
+      },
+    });
+
+    if (response.status === 404) {
+      return [];
+    }
+
+    const data: LocationResponse = await response.json();
+    
+    if (data.Codigo === 0 && data.Data) {
+      return data.Data;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error fetching provinces:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetches municipalities for a specific province
+ * @param idProvincia - Province ID
+ * @returns Promise with array of municipalities
+ */
+export const fetchMunicipalities = async (idProvincia: string): Promise<LocationOption[]> => {
+  if (!API_BASE_URL) {
+    throw new Error('API_BASE_URL is not configured');
+  }
+
+  if (!idProvincia) {
+    return [];
+  }
+
+  const stationId = useStationStore.getState().idUnico;
+  
+  if (!stationId) {
+    throw new Error('Station ID is not available. Please ensure the station is initialized.');
+  }
+
+  const endpoint = `${API_BASE_URL}/${API_GENERAL_SEGMENT}/ConsultaMunicipiosProvincia?id_provincia=${encodeURIComponent(idProvincia)}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'equipo': stationId,
+      },
+    });
+
+    if (response.status === 404) {
+      return [];
+    }
+
+    const data: LocationResponse = await response.json();
+    
+    if (data.Codigo === 0 && data.Data) {
+      return data.Data;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error fetching municipalities:', error);
+    return [];
+  }
+};
