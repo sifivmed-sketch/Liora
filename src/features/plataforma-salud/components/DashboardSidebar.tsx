@@ -5,11 +5,13 @@ import { useRouter, usePathname } from '@/i18n/navigation';
 import PersonIcon from '@/components/icons/person.icon';
 import CalendarIcon from '@/components/icons/calendar.icon';
 import DocumentIcon from '@/components/icons/document.icon';
-import HeartIcon from '@/components/icons/heart.icon';
-import PillIcon from '@/components/icons/pill.icon';
-import ChartBarIcon from '@/components/icons/chart-bar.icon';
+// Health section icons (commented out - not in use)
+// import HeartIcon from '@/components/icons/heart.icon';
+// import PillIcon from '@/components/icons/pill.icon';
+// import ChartBarIcon from '@/components/icons/chart-bar.icon';
 import SettingsIcon from '@/components/icons/settings.icon';
 import HelpIcon from '@/components/icons/help.icon';
+import LockIcon from '@/components/icons/lock.icon';
 
 interface MenuItem {
   label: string;
@@ -38,13 +40,14 @@ const DashboardSidebar = () => {
     { label: t('my-appointments'), path: '/plataforma-salud/citas', icon: CalendarIcon, section: 'my-account' },
     { label: t('medical-history'), path: '/plataforma-salud/historial', icon: DocumentIcon, section: 'my-account' },
     
-    // Health Section
-    { label: t('my-wellbeing'), path: '/plataforma-salud/bienestar', icon: HeartIcon, section: 'health' },
-    { label: t('medications'), path: '/plataforma-salud/medicamentos', icon: PillIcon, section: 'health' },
-    { label: t('reports'), path: '/plataforma-salud/reportes', icon: ChartBarIcon, section: 'health' },
+    // Health Section (commented out - not in use)
+    // { label: t('my-wellbeing'), path: '/plataforma-salud/bienestar', icon: HeartIcon, section: 'health' },
+    // { label: t('medications'), path: '/plataforma-salud/medicamentos', icon: PillIcon, section: 'health' },
+    // { label: t('reports'), path: '/plataforma-salud/reportes', icon: ChartBarIcon, section: 'health' },
     
     // Configuration Section
-    { label: t('settings'), path: '/plataforma-salud/configuracion', icon: SettingsIcon, section: 'configuration' },
+    { label: t('system-settings'), path: '/plataforma-salud/configuracion', icon: SettingsIcon, section: 'configuration' },
+    { label: t('access-control'), path: '/plataforma-salud/control-acceso', icon: LockIcon, section: 'configuration' },
     { label: t('help'), path: '/plataforma-salud/ayuda', icon: HelpIcon, section: 'configuration' },
   ];
 
@@ -129,8 +132,8 @@ const DashboardSidebar = () => {
           </div>
         )}
 
-        {/* Health Section */}
-        {groupedItems['health'] && (
+        {/* Health Section (commented out - not in use) */}
+        {/* {groupedItems['health'] && (
           <div className="mb-8">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
               {t('health')}
@@ -161,7 +164,7 @@ const DashboardSidebar = () => {
               })}
             </ul>
           </div>
-        )}
+        )} */}
 
         {/* Configuration Section */}
         {groupedItems['configuration'] && (

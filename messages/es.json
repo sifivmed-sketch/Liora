@@ -376,7 +376,10 @@
         "medications": "Medicamentos",
         "reports": "Reportes",
         "configuration": "CONFIGURACIÓN",
+        "general": "GENERAL",
         "settings": "Configuración",
+        "system-settings": "Plataforma",
+        "access-control": "Control de Acceso",
         "help": "Ayuda"
       }
     },
@@ -454,6 +457,61 @@
         "permissions-active": "de {total} permisos activos",
         "specialty": "Especialidad",
         "clinic": "Clínica"
+      }
+    },
+    "not-found": {
+      "title": "Página no encontrada",
+      "description": "La página a la que intentas acceder no está disponible o no existe.",
+      "back-to-profile": "Volver al Perfil"
+    },
+    "historial": {
+      "print": {
+        "title": "Imprimir / Exportar Historia",
+        "subtitle": "Seleccione las secciones que desea incluir en el documento",
+        "back-button": "Volver al Historial",
+        "sections-title": "Secciones a Incluir",
+        "sections": {
+          "personal-information": "Información Personal",
+          "personal-information-description": "Datos demográficos, contacto, tipo de sangre",
+          "allergies": "Alergias",
+          "allergies-description": "Lista de alergias registradas",
+          "chronic-conditions": "Condiciones Crónicas",
+          "chronic-conditions-description": "Enfermedades y condiciones actuales",
+          "active-medications": "Medicamentos Activos",
+          "active-medications-description": "Medicación actual con dosis",
+          "historical-medications": "Medicamentos Históricos",
+          "historical-medications-description": "Medicamentos anteriores (finalizados)",
+          "consultations": "Historial de Consultas",
+          "consultations-description": "Visitas médicas realizadas",
+          "vaccines": "Vacunas",
+          "vaccines-description": "Registro de vacunación",
+          "lab-results": "Resultados de Laboratorio",
+          "lab-results-description": "Exámenes y análisis clínicos"
+        },
+        "date-range-title": "Rango de Fechas (Opcional)",
+        "date-range-description": "Deje vacío para incluir todo el historial",
+        "date-from": "Desde",
+        "date-to": "Hasta",
+        "preview-title": "Vista Previa",
+        "preview-description": "Vista previa del documento\ncon las secciones seleccionadas",
+        "preview-pages": "Aproximadamente 4 páginas",
+        "export-options-title": "Opciones de Exportación",
+        "print-button": "Imprimir",
+        "download-pdf-button": "Descargar PDF",
+        "send-email-button": "Enviar por Email",
+        "security-notice-title": "Información Confidencial",
+        "security-notice-description": "Este documento contiene información médica protegida. Manéjelo con cuidado.",
+        "email-modal-title": "Enviar por Email",
+        "email-label": "Correo electrónico",
+        "email-placeholder": "correo@ejemplo.com",
+        "email-message-label": "Mensaje (opcional)",
+        "email-message-placeholder": "Agregar un mensaje...",
+        "cancel-button": "Cancelar",
+        "send-button": "Enviar",
+        "print-toast": "Demo: Abriendo diálogo de impresión...",
+        "download-pdf-toast": "Demo: Descargando PDF...",
+        "email-sent-toast": "Demo: Email enviado correctamente",
+        "email-required": "El correo electrónico es requerido"
       }
     }
   }

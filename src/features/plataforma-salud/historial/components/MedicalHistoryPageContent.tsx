@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import Textarea from '@/components/Textarea';
 import { fetchPatientProfile, PatientProfileData } from '@/features/plataforma-salud/perfil/services/profile.service';
 
@@ -29,6 +30,7 @@ interface MedicalHistoryPageContentProps {
  * @returns JSX element with medical history page layout
  */
 const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPageContentProps) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'resumen' | 'consultas' | 'medicamentos' | 'alergias' | 'vacunas' | 'laboratorios'>('resumen');
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,10 +77,10 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
   };
 
   /**
-   * Handles print action
+   * Handles print action - navigates to print page
    */
   const handlePrint = () => {
-    toast.info('Funcionalidad de impresión');
+    router.push('/plataforma-salud/historial/print');
   };
 
   /**
@@ -238,7 +240,7 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Mi Historial Médico</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Mi Historial Médico  </h1>
               <p className="text-gray-600 mt-1">Información médica completa</p>
             </div>
             <div className="flex items-center gap-3">

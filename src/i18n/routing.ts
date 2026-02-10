@@ -50,6 +50,14 @@ export const routing = defineRouting({
             'es': '/plataforma-salud/historial',
             'en': '/health-platform/medical-history',
         },
+        '/plataforma-salud/historial/print': { 
+            'es': '/plataforma-salud/historial/print',
+            'en': '/health-platform/medical-history/print',
+        },
+        '/plataforma-salud/control-acceso': { 
+            'es': '/plataforma-salud/control-acceso',
+            'en': '/health-platform/access-control',
+        },
         '/plataforma-salud': { 
             'es': '/plataforma-salud',
             'en': '/health-platform',

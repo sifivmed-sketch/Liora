@@ -376,7 +376,10 @@
         "medications": "Medications",
         "reports": "Reports",
         "configuration": "CONFIGURATION",
+        "general": "GENERAL",
         "settings": "Settings",
+        "system-settings": "Platform",
+        "access-control": "Access Control",
         "help": "Help"
       }
     },
@@ -454,6 +457,61 @@
         "permissions-active": "of {total} permissions active",
         "specialty": "Specialty",
         "clinic": "Clinic"
+      }
+    },
+    "not-found": {
+      "title": "Page not found",
+      "description": "The page you are trying to access is not available or does not exist.",
+      "back-to-profile": "Back to Profile"
+    },
+    "historial": {
+      "print": {
+        "title": "Print / Export History",
+        "subtitle": "Select the sections you want to include in the document",
+        "back-button": "Back to History",
+        "sections-title": "Sections to Include",
+        "sections": {
+          "personal-information": "Personal Information",
+          "personal-information-description": "Demographic data, contact, blood type",
+          "allergies": "Allergies",
+          "allergies-description": "List of registered allergies",
+          "chronic-conditions": "Chronic Conditions",
+          "chronic-conditions-description": "Current diseases and conditions",
+          "active-medications": "Active Medications",
+          "active-medications-description": "Current medication with dosage",
+          "historical-medications": "Historical Medications",
+          "historical-medications-description": "Previous medications (completed)",
+          "consultations": "Consultation History",
+          "consultations-description": "Medical visits performed",
+          "vaccines": "Vaccines",
+          "vaccines-description": "Vaccination record",
+          "lab-results": "Laboratory Results",
+          "lab-results-description": "Clinical exams and analyses"
+        },
+        "date-range-title": "Date Range (Optional)",
+        "date-range-description": "Leave empty to include all history",
+        "date-from": "From",
+        "date-to": "To",
+        "preview-title": "Preview",
+        "preview-description": "Document preview\nwith selected sections",
+        "preview-pages": "Approximately 4 pages",
+        "export-options-title": "Export Options",
+        "print-button": "Print",
+        "download-pdf-button": "Download PDF",
+        "send-email-button": "Send by Email",
+        "security-notice-title": "Confidential Information",
+        "security-notice-description": "This document contains protected medical information. Handle with care.",
+        "email-modal-title": "Send by Email",
+        "email-label": "Email",
+        "email-placeholder": "email@example.com",
+        "email-message-label": "Message (optional)",
+        "email-message-placeholder": "Add a message...",
+        "cancel-button": "Cancel",
+        "send-button": "Send",
+        "print-toast": "Demo: Opening print dialog...",
+        "download-pdf-toast": "Demo: Downloading PDF...",
+        "email-sent-toast": "Demo: Email sent successfully",
+        "email-required": "Email is required"
       }
     }
   }
