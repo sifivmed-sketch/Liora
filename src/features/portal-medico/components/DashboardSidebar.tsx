@@ -1,10 +1,11 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, usePathname } from '@/i18n/navigation';
 import PersonIcon from '@/components/icons/person.icon';
 import UsersGroupIcon from '@/components/icons/users-group.icon';
 import CalendarIcon from '@/components/icons/calendar.icon';
+import DocumentIcon from '@/components/icons/document.icon';
 import SettingsIcon from '@/components/icons/settings.icon';
 import HelpIcon from '@/components/icons/help.icon';
 
@@ -21,10 +22,27 @@ interface MenuItem {
  * 
  * @returns JSX element with dashboard sidebar navigation
  */
+/** Fallback labels when translation key is missing (avoids hydration mismatch) */
+const SIDEBAR_LABELS: Record<string, { es: string; en: string }> = {
+  templates: { es: 'Plantillas', en: 'Templates' },
+};
+
 const DashboardSidebar = () => {
   const t = useTranslations('portal-medico.dashboard.sidebar');
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+
+  const getLabel = (key: string): string => {
+    try {
+      const value = t(key);
+      if (value && !value.startsWith('portal-medico.')) return value;
+    } catch {
+      // key missing
+    }
+    const fallback = SIDEBAR_LABELS[key as keyof typeof SIDEBAR_LABELS];
+    return fallback ? fallback[locale as 'es' | 'en'] ?? fallback.en : key;
+  };
 
   /**
    * Menu items configuration
@@ -33,9 +51,11 @@ const DashboardSidebar = () => {
     // Medical Panel Section
     { label: t('my-profile'), path: '/portal-medico/perfil', icon: PersonIcon, section: 'medical-panel' },
     { label: t('my-patients'), path: '/portal-medico/pacientes', icon: UsersGroupIcon, section: 'medical-panel' },
-    { label: t('appointments'), path: '/portal-medico/citas', icon: CalendarIcon, section: 'medical-panel' },
-    { label: t('medical-centers'), path: '/portal-medico/centros', icon: UsersGroupIcon, section: 'medical-panel' },
-    
+    { label: t('calendar'), path: '/portal-medico/calendario', icon: CalendarIcon, section: 'medical-panel' },
+    { label: t('waiting-room'), path: '/portal-medico/sala-espera', icon: UsersGroupIcon, section: 'medical-panel' },
+    { label: t('consultation'), path: '/portal-medico/consulta', icon: DocumentIcon, section: 'medical-panel' },
+    { label: getLabel('templates'), path: '/portal-medico/plantillas', icon: DocumentIcon, section: 'medical-panel' },
+    // { label: t('medical-centers'), path: '/portal-medico/centros', icon: UsersGroupIcon, section: 'medical-panel' },
     // Configuration Section
     { label: t('settings'), path: '/portal-medico/configuracion', icon: SettingsIcon, section: 'configuration' },
     { label: t('help'), path: '/portal-medico/ayuda', icon: HelpIcon, section: 'configuration' },

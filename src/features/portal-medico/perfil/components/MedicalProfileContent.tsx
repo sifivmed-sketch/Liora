@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -24,12 +24,24 @@ interface MedicalProfileFormData {
   selectedCenters: string[];
 }
 
+/** Approval status for a selected work center (simulation) */
+export type CenterApprovalStatus = 'pending' | 'approved' | 'denied';
+
 interface MedicalCenter {
   id: string;
   name: string;
   type: string;
   location: string;
   services: string[];
+  /** True when added by the doctor (not registered in the platform) */
+  isExternal?: boolean;
+  /** Professional email for external centers (contact for acceptance) */
+  professionalEmail?: string;
+}
+
+/** Selected center with approval status for display */
+interface SelectedCenterWithStatus extends MedicalCenter {
+  approvalStatus: CenterApprovalStatus;
 }
 
 interface ProfileCompletion {
@@ -37,6 +49,19 @@ interface ProfileCompletion {
   missingCredentials: string[];
   hasIncompleteCredentials: boolean;
   hasNoCenters: boolean;
+}
+
+/** Extended saved profile data (localStorage) including work centers metadata */
+interface SavedProfileData extends MedicalProfileFormData {
+  workCentersStatus?: Record<string, CenterApprovalStatus>;
+  externalCenters?: MedicalCenter[];
+}
+
+/** Form data for adding an external (off-platform) medical center */
+interface ExternalCenterFormData {
+  externalCenterName: string;
+  externalCenterEmail: string;
+  externalCenterType: string;
 }
 
 /**
@@ -58,7 +83,13 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
     hasIncompleteCredentials: false,
     hasNoCenters: false,
   });
-  const [selectedCenters, setSelectedCenters] = useState<MedicalCenter[]>([]);
+  const [selectedCenters, setSelectedCenters] = useState<SelectedCenterWithStatus[]>([]);
+  const [centerSearchQuery, setCenterSearchQuery] = useState('');
+  const [externalCenters, setExternalCenters] = useState<MedicalCenter[]>([]);
+  const [showAddExternalCenter, setShowAddExternalCenter] = useState(false);
+
+  /** Prevents watch effect from setting isDirty(true) right after load from localStorage */
+  const isLoadingFromStorageRef = useRef(false);
 
   const {
     register,
@@ -80,6 +111,20 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
       licenseType: '',
       yearsOfPractice: '',
       selectedCenters: [],
+    },
+  });
+
+  const {
+    register: registerExternal,
+    control: controlExternal,
+    handleSubmit: handleSubmitExternal,
+    formState: { errors: errorsExternal },
+    reset: resetExternalForm,
+  } = useForm<ExternalCenterFormData>({
+    defaultValues: {
+      externalCenterName: '',
+      externalCenterEmail: '',
+      externalCenterType: '',
     },
   });
 
@@ -128,6 +173,24 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
       services: ['Consulta Externa', 'Cirugía Menor'],
     },
   ], []);
+
+  /** All centers (platform + external) for search and selection */
+  const allAvailableCenters = useMemo(
+    () => [...availableCenters, ...externalCenters],
+    [availableCenters, externalCenters]
+  );
+
+  /** Centers filtered by search query (name, type, location) */
+  const filteredCenters = useMemo(() => {
+    const q = centerSearchQuery.trim().toLowerCase();
+    if (!q) return allAvailableCenters;
+    return allAvailableCenters.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.type.toLowerCase().includes(q) ||
+        c.location.toLowerCase().includes(q)
+    );
+  }, [allAvailableCenters, centerSearchQuery]);
 
   /**
    * Gets display name for field
@@ -215,59 +278,75 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
     };
   }, [selectedCenters, getFieldDisplayName, t]);
 
-  // Watch form changes to update completion and set dirty state
+  // Watch form and centers to update completion and dirty state (do not set dirty when restoring from storage)
   useEffect(() => {
     const subscription = watch((value) => {
+      if (isLoadingFromStorageRef.current) return;
       const formData = value as MedicalProfileFormData;
-      // Include selected centers in form data for calculation
       formData.selectedCenters = selectedCenters.map((c) => c.id);
       const completion = calculateProfileCompletion(formData);
       setProfileCompletion(completion);
-      // Set dirty state only on user changes
       setIsDirty(true);
     });
     return () => subscription.unsubscribe();
   }, [watch, selectedCenters, calculateProfileCompletion]);
 
   /**
-   * Loads profile data from localStorage
+   * Loads profile data from localStorage.
+   * Only runs on mount and when userId or availableCenters change (not when selectedCenters
+   * or completion change), so that editing work centers does not re-run load and clear dirty state.
    */
   useEffect(() => {
     const loadProfile = () => {
+      isLoadingFromStorageRef.current = true;
       try {
         setIsLoading(true);
         const key = `medical_profile_${userId}`;
         const saved = localStorage.getItem(key);
 
         if (saved) {
-          const savedData: MedicalProfileFormData = JSON.parse(saved);
-          
-          // Restore form data
+          const savedData: SavedProfileData = JSON.parse(saved);
+          const externals = savedData.externalCenters ?? [];
+          setExternalCenters(externals);
+
           reset(savedData);
-          
-          // Restore selected centers
+
+          const allCenters = [...availableCenters, ...externals];
+          const statusMap = savedData.workCentersStatus ?? {};
+
           if (savedData.selectedCenters && savedData.selectedCenters.length > 0) {
-            const centers = availableCenters.filter((center) =>
-              savedData.selectedCenters.includes(center.id)
-            );
-            setSelectedCenters(centers);
+            const statusOptions: CenterApprovalStatus[] = ['approved', 'pending', 'denied'];
+            const withStatus: SelectedCenterWithStatus[] = savedData.selectedCenters
+              .map((id, index) => {
+                const center = allCenters.find((c) => c.id === id);
+                if (!center) return null;
+                const status = statusMap[id] ?? statusOptions[index % 3];
+                return { ...center, approvalStatus: status };
+              })
+              .filter((c): c is SelectedCenterWithStatus => c !== null);
+            setSelectedCenters(withStatus);
+          } else {
+            setSelectedCenters([]);
           }
-          
-          // Calculate initial completion
+
           const completion = calculateProfileCompletion(savedData);
           setProfileCompletion(completion);
-          
           setIsDirty(false);
         }
       } catch (error) {
         console.error('Error loading profile from localStorage:', error);
       } finally {
         setIsLoading(false);
+        setTimeout(() => {
+          isLoadingFromStorageRef.current = false;
+        }, 0);
       }
     };
 
     loadProfile();
-  }, [userId, availableCenters, calculateProfileCompletion, reset]);
+    // Intentionally omit calculateProfileCompletion so that changing selectedCenters
+    // does not re-run load (which would set isDirty false and hide the save bar).
+  }, [userId, availableCenters, reset]);
 
   /**
    * Handles form submission
@@ -276,21 +355,30 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
   const onSubmit = async (data: MedicalProfileFormData) => {
     try {
       setIsSaving(true);
-      
-      // Update selected centers in form data
+
       data.selectedCenters = selectedCenters.map((center) => center.id);
-      
-      // Save to localStorage
+      const workCentersStatus: Record<string, CenterApprovalStatus> = {};
+      selectedCenters.forEach((c) => {
+        workCentersStatus[c.id] = c.approvalStatus;
+      });
+      const toSave: SavedProfileData = {
+        ...data,
+        workCentersStatus,
+        externalCenters,
+      };
+
       const key = `medical_profile_${userId}`;
-      localStorage.setItem(key, JSON.stringify(data));
-      
-      // Update completion
+      localStorage.setItem(key, JSON.stringify(toSave));
+
+      isLoadingFromStorageRef.current = true;
+      reset(toSave);
       const completion = calculateProfileCompletion(data);
       setProfileCompletion(completion);
-      
       setIsDirty(false);
-      
-      // Show success message
+      setTimeout(() => {
+        isLoadingFromStorageRef.current = false;
+      }, 0);
+
       toast.success(t('save-success'));
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -307,27 +395,36 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
     try {
       const key = `medical_profile_${userId}`;
       const saved = localStorage.getItem(key);
-      
+
       if (saved) {
-        const savedData: MedicalProfileFormData = JSON.parse(saved);
+        const savedData: SavedProfileData = JSON.parse(saved);
         reset(savedData);
-        
-        // Restore selected centers
+        setExternalCenters(savedData.externalCenters ?? []);
+
+        const allCenters = [...availableCenters, ...(savedData.externalCenters ?? [])];
+        const statusMap = savedData.workCentersStatus ?? {};
+
         if (savedData.selectedCenters && savedData.selectedCenters.length > 0) {
-          const centers = availableCenters.filter((center) =>
-            savedData.selectedCenters.includes(center.id)
-          );
-          setSelectedCenters(centers);
+          const statusOptions: CenterApprovalStatus[] = ['approved', 'pending', 'denied'];
+          const withStatus: SelectedCenterWithStatus[] = savedData.selectedCenters
+            .map((id, index) => {
+              const center = allCenters.find((c) => c.id === id);
+              if (!center) return null;
+              const status = statusMap[id] ?? statusOptions[index % 3];
+              return { ...center, approvalStatus: status };
+            })
+            .filter((c): c is SelectedCenterWithStatus => c !== null);
+          setSelectedCenters(withStatus);
         } else {
           setSelectedCenters([]);
         }
-        
-        // Recalculate completion
+
         const completion = calculateProfileCompletion(savedData);
         setProfileCompletion(completion);
       } else {
         reset();
         setSelectedCenters([]);
+        setExternalCenters([]);
         setProfileCompletion({
           percentage: 0,
           missingCredentials: [],
@@ -335,36 +432,70 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
           hasNoCenters: true,
         });
       }
-      
+
       setIsDirty(false);
     } catch (error) {
       console.error('Error loading from localStorage:', error);
       reset();
       setSelectedCenters([]);
+      setExternalCenters([]);
       setIsDirty(false);
     }
   };
 
   /**
-   * Handles adding a medical center
+   * Handles adding a medical center (with pending approval status)
    * @param center - Medical center to add
    */
   const handleAddCenter = (center: MedicalCenter) => {
-    if (!selectedCenters.some((c) => c.id === center.id)) {
-      setSelectedCenters([...selectedCenters, center]);
-      // Update form data
-      const currentData = watch();
-      setValue('selectedCenters', [...selectedCenters.map((c) => c.id), center.id]);
-      
-      // Mark as dirty
-      setIsDirty(true);
-      
-      // Recalculate completion
-      setTimeout(() => {
-        const completion = calculateProfileCompletion({ ...currentData, selectedCenters: [...selectedCenters.map((c) => c.id), center.id] } as MedicalProfileFormData);
-        setProfileCompletion(completion);
-      }, 0);
-    }
+    if (selectedCenters.some((c) => c.id === center.id)) return;
+    const withStatus: SelectedCenterWithStatus = { ...center, approvalStatus: 'pending' };
+    setSelectedCenters([...selectedCenters, withStatus]);
+    setValue('selectedCenters', [...selectedCenters.map((c) => c.id), center.id]);
+    setIsDirty(true);
+    const currentData = watch();
+    setTimeout(() => {
+      const completion = calculateProfileCompletion({
+        ...currentData,
+        selectedCenters: [...selectedCenters.map((c) => c.id), center.id],
+      } as MedicalProfileFormData);
+      setProfileCompletion(completion);
+    }, 0);
+  };
+
+  /**
+   * Handles adding an external (off-platform) center after form validation.
+   * Called by the external center form's handleSubmit.
+   * @param data - Validated form data (name, email, type)
+   */
+  const onExternalCenterSubmit = (data: ExternalCenterFormData) => {
+    const trimmedName = data.externalCenterName.trim();
+    const trimmedEmail = data.externalCenterEmail.trim();
+    const trimmedType = data.externalCenterType.trim();
+    const id = `external_${Date.now()}`;
+    const newCenter: MedicalCenter = {
+      id,
+      name: trimmedName,
+      type: trimmedType,
+      location: t('external-center-location'),
+      services: [],
+      isExternal: true,
+      professionalEmail: trimmedEmail,
+    };
+    setExternalCenters([...externalCenters, newCenter]);
+    resetExternalForm();
+    setShowAddExternalCenter(false);
+    handleAddCenter(newCenter);
+    setIsDirty(true);
+    toast.success(t('external-center-added'));
+  };
+
+  /**
+   * Closes the external center form and resets its fields
+   */
+  const handleCloseExternalCenterForm = () => {
+    setShowAddExternalCenter(false);
+    resetExternalForm();
   };
 
   /**
@@ -434,6 +565,14 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
     { value: 'Exequatur', label: t('license-types.exequatur') },
     { value: 'Colegio_Medico', label: t('license-types.colegio-medico') },
     { value: 'Licencia_Especial', label: t('license-types.licencia-especial') },
+  ];
+
+  const centerTypeOptions: SelectOption[] = [
+    { value: '', label: t('center-type-placeholder') },
+    { value: 'Hospital Público', label: t('center-types.hospital-publico') },
+    { value: 'Clínica Privada', label: t('center-types.clinica-privada') },
+    { value: 'Centro Diagnóstico', label: t('center-types.centro-diagnostico') },
+    { value: 'Hospital Universitario', label: t('center-types.hospital-universitario') },
   ];
 
   if (isLoading) {
@@ -739,8 +878,116 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     {t('available-centers')}
                   </label>
+                  <div className="relative mb-3">
+                    <input
+                      type="search"
+                      value={centerSearchQuery}
+                      onChange={(e) => setCenterSearchQuery(e.target.value)}
+                      placeholder={t('search-centers-placeholder')}
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder-gray-500"
+                      aria-label={t('search-centers-aria')}
+                    />
+                    <svg
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <div className="mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddExternalCenter((prev) => !prev)}
+                      className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      aria-expanded={showAddExternalCenter}
+                      aria-label={t('add-external-center-aria')}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      {t('add-external-center')}
+                    </button>
+                  </div>
+                  {showAddExternalCenter && (
+                    <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg" role="group" aria-labelledby="external-center-form-title">
+                      <h4 id="external-center-form-title" className="text-sm font-medium text-gray-900 mb-3">{t('external-center-form-title')}</h4>
+                      <div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                          <Input
+                            label={t('external-center-name')}
+                            required
+                            registration={registerExternal('externalCenterName', {
+                              required: t('external-center-name-required'),
+                              minLength: {
+                                value: 2,
+                                message: t('external-center-name-min'),
+                              },
+                            })}
+                            placeholder={t('external-center-name-placeholder')}
+                            error={errorsExternal.externalCenterName?.message}
+                            className="focus:ring-2 focus:ring-blue-500"
+                          />
+                          <Input
+                            label={t('external-center-email')}
+                            type="email"
+                            required
+                            registration={registerExternal('externalCenterEmail', {
+                              required: t('external-center-email-required'),
+                              pattern: {
+                                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                message: t('fields.email-invalid'),
+                              },
+                            })}
+                            placeholder={t('external-center-email-placeholder')}
+                            error={errorsExternal.externalCenterEmail?.message}
+                            className="focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="mb-3">
+                          <Controller
+                            name="externalCenterType"
+                            control={controlExternal}
+                            rules={{
+                              required: t('external-center-type-required'),
+                            }}
+                            render={({ field }) => (
+                              <CustomSelect
+                                label={t('external-center-type')}
+                                required
+                                options={centerTypeOptions}
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder={t('center-type-placeholder')}
+                                error={errorsExternal.externalCenterType?.message}
+                              />
+                            )}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleSubmitExternal(onExternalCenterSubmit)}
+                            className="px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: '#2F80ED' }}
+                          >
+                            {t('external-center-submit')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCloseExternalCenterForm}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {t('cancel')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {availableCenters.map((center) => {
+                    {filteredCenters.map((center) => {
                       const isSelected = selectedCenters.some((c) => c.id === center.id);
                       return (
                         <div
@@ -816,48 +1063,57 @@ const MedicalProfileContent = ({ userId, userName }: { userId: string; userName:
                   <h3 className="text-sm font-medium text-gray-700 mb-3">{t('selected-centers')}</h3>
                   {selectedCenters.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
-                      <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                       </svg>
-                      <p>{t('no-centers-selected')}</p>
-                      <p className="text-sm mt-1">{t('select-center-message')}</p>
+                      <p className="font-medium text-gray-700">{t('no-centers-selected')}</p>
+                      <p className="text-sm mt-2 max-w-md mx-auto">{t('select-center-message-external')}</p>
+                      <p className="text-sm mt-1 max-w-md mx-auto">{t('select-center-message-platform')}</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {selectedCenters.map((center) => (
-                        <div
-                          key={center.id}
-                          className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
-                        >
-                          <div className="flex items-center flex-1">
-                            <svg className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8z" clipRule="evenodd"></path>
-                            </svg>
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900 text-sm">{center.name}</p>
-                              <p className="text-xs text-gray-600">
-                                {center.type} • {center.location}
-                              </p>
+                      {selectedCenters.map((center) => {
+                        const statusConfig = {
+                          pending: { label: t('status-pending'), className: 'bg-gray-100 text-gray-700' },
+                          approved: { label: t('status-approved'), className: 'bg-green-100 text-green-800' },
+                          denied: { label: t('status-denied'), className: 'bg-red-100 text-red-800' },
+                        };
+                        const config = statusConfig[center.approvalStatus];
+                        return (
+                          <div
+                            key={center.id}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                          >
+                            <div className="flex items-center flex-1 min-w-0">
+                              <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8z" clipRule="evenodd"></path>
+                              </svg>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-900 text-sm">{center.name}</p>
+                                <p className="text-xs text-gray-600">
+                                  {center.type} • {center.location}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${config.className}`}>
+                                {config.label}
+                              </span>
+                              <button
+                                type="button"
+                                className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+                                onClick={() => handleRemoveCenter(center.id)}
+                                aria-label={t('remove-center', { name: center.name })}
+                                tabIndex={0}
+                              >
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path>
+                                </svg>
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">
-                              {t('selected')}
-                            </span>
-                            <button
-                              type="button"
-                              className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
-                              onClick={() => handleRemoveCenter(center.id)}
-                              aria-label={t('remove-center', { name: center.name })}
-                              tabIndex={0}
-                            >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

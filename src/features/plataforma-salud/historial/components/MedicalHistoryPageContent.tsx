@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import Textarea from '@/components/Textarea';
+import DocumentIcon from '@/components/icons/document.icon';
 import { fetchPatientProfile, PatientProfileData } from '@/features/plataforma-salud/perfil/services/profile.service';
 
 /**
@@ -33,6 +34,13 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'resumen' | 'consultas' | 'medicamentos' | 'alergias' | 'vacunas' | 'laboratorios'>('resumen');
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [prescriptionViewerMedication, setPrescriptionViewerMedication] = useState<{
+    name: string;
+    dosage: string;
+    prescribedBy: string;
+    since: string;
+    type: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<PatientProfileData | null>(null);
 
@@ -64,6 +72,27 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
   const handleCloseCorrectionModal = () => {
     setShowCorrectionModal(false);
     reset();
+  };
+
+  /**
+   * Opens prescription viewer modal with the given medication data (example/demo)
+   * @param medication - Medication data to display in the prescription view
+   */
+  const handleOpenPrescriptionViewer = (medication: {
+    name: string;
+    dosage: string;
+    prescribedBy: string;
+    since: string;
+    type: string;
+  }) => {
+    setPrescriptionViewerMedication(medication);
+  };
+
+  /**
+   * Closes prescription viewer modal
+   */
+  const handleClosePrescriptionViewer = () => {
+    setPrescriptionViewerMedication(null);
   };
 
   /**
@@ -487,7 +516,7 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
                         <span className="font-semibold text-gray-900">Consulta General</span>
                         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">Completada</span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">Dr. Rodríguez • 02/02/2025 • 9:35 AM</p>
+                      <p className="text-sm text-gray-500 mt-1">Hospital Regional • Dr. Rodríguez • 02/02/2025 • 9:35 AM</p>
                       <p className="text-sm text-gray-600 mt-2"><strong>Motivo:</strong> Cefalea persistente</p>
                       <p className="text-sm text-gray-600"><strong>Diagnóstico:</strong> Cefalea tensional. Se indica seguimiento.</p>
                     </div>
@@ -509,7 +538,7 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
                         <span className="font-semibold text-gray-900">Control Diabetes</span>
                         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">Completada</span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">Dr. Rodríguez • 28/01/2025 • 10:00 AM</p>
+                      <p className="text-sm text-gray-500 mt-1">Hospital Regional • Dr. Rodríguez • 28/01/2025 • 10:00 AM</p>
                       <p className="text-sm text-gray-600 mt-2"><strong>Motivo:</strong> Control de rutina</p>
                       <p className="text-sm text-gray-600"><strong>Diagnóstico:</strong> Niveles de glucosa estables. Continuar tratamiento.</p>
                     </div>
@@ -531,7 +560,7 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
                         <span className="font-semibold text-gray-900">Consulta Inicial</span>
                         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">Completada</span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">Dr. Rodríguez • 15/01/2025 • 11:30 AM</p>
+                      <p className="text-sm text-gray-500 mt-1">Hospital Regional • Dr. Rodríguez • 15/01/2025 • 11:30 AM</p>
                       <p className="text-sm text-gray-600 mt-2"><strong>Motivo:</strong> Primera consulta</p>
                       <p className="text-sm text-gray-600"><strong>Diagnóstico:</strong> Evaluación general completa. Historia clínica creada.</p>
                     </div>
@@ -563,8 +592,25 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
                       </div>
                       <span className="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-700">Activo</span>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-blue-200 text-sm text-gray-500">
-                      <span>Prescrito por: Dr. Rodríguez</span> • <span>Desde: 15/01/2025</span> • <span>Crónico</span>
+                    <div className="mt-3 pt-3 border-t border-blue-200 flex items-center justify-between gap-3">
+                      <p className="text-sm text-gray-500">
+                        <span>Prescrito por: Dr. Rodríguez</span> • <span>Desde: 15/01/2025</span> • <span>Crónico</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPrescriptionViewer({
+                          name: 'Omeprazol 20mg',
+                          dosage: '1 cápsula - 1 vez al día - En ayunas',
+                          prescribedBy: 'Dr. Rodríguez',
+                          since: '15/01/2025',
+                          type: 'Crónico',
+                        })}
+                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 transition-colors flex-shrink-0"
+                        aria-label="Ver receta de Omeprazol 20mg"
+                        title="Ver receta"
+                      >
+                        <DocumentIcon className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
 
@@ -576,8 +622,25 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
                       </div>
                       <span className="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-700">Activo</span>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-blue-200 text-sm text-gray-500">
-                      <span>Prescrito por: Dr. Rodríguez</span> • <span>Desde: 15/01/2025</span> • <span>Crónico</span>
+                    <div className="mt-3 pt-3 border-t border-blue-200 flex items-center justify-between gap-3">
+                      <p className="text-sm text-gray-500">
+                        <span>Prescrito por: Dr. Rodríguez</span> • <span>Desde: 15/01/2025</span> • <span>Crónico</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPrescriptionViewer({
+                          name: 'Losartán 50mg',
+                          dosage: '1 tableta - 1 vez al día - Por la mañana',
+                          prescribedBy: 'Dr. Rodríguez',
+                          since: '15/01/2025',
+                          type: 'Crónico',
+                        })}
+                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 transition-colors flex-shrink-0"
+                        aria-label="Ver receta de Losartán 50mg"
+                        title="Ver receta"
+                      >
+                        <DocumentIcon className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
 
@@ -589,8 +652,25 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
                       </div>
                       <span className="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-700">Activo</span>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-blue-200 text-sm text-gray-500">
-                      <span>Prescrito por: Dr. Rodríguez</span> • <span>Desde: 15/01/2025</span> • <span>Crónico</span>
+                    <div className="mt-3 pt-3 border-t border-blue-200 flex items-center justify-between gap-3">
+                      <p className="text-sm text-gray-500">
+                        <span>Prescrito por: Dr. Rodríguez</span> • <span>Desde: 15/01/2025</span> • <span>Crónico</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPrescriptionViewer({
+                          name: 'Metformina 850mg',
+                          dosage: '1 tableta - 2 veces al día - Con las comidas',
+                          prescribedBy: 'Dr. Rodríguez',
+                          since: '15/01/2025',
+                          type: 'Crónico',
+                        })}
+                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 transition-colors flex-shrink-0"
+                        aria-label="Ver receta de Metformina 850mg"
+                        title="Ver receta"
+                      >
+                        <DocumentIcon className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -607,8 +687,25 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
                       </div>
                       <span className="px-3 py-1 text-sm font-medium rounded-full bg-gray-200 text-gray-600">Finalizado</span>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-gray-200 text-sm text-gray-400">
-                      <span>Prescrito por: Dr. Rodríguez</span> • <span>Dic 2024</span>
+                    <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between gap-3">
+                      <p className="text-sm text-gray-400">
+                        <span>Prescrito por: Dr. Rodríguez</span> • <span>Dic 2024</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPrescriptionViewer({
+                          name: 'Ibuprofeno 400mg',
+                          dosage: '1 tableta - Cada 8 horas - Por 5 días',
+                          prescribedBy: 'Dr. Rodríguez',
+                          since: 'Dic 2024',
+                          type: 'Finalizado',
+                        })}
+                        className="p-2 rounded-lg text-gray-500 hover:bg-gray-200 transition-colors flex-shrink-0"
+                        aria-label="Ver receta de Ibuprofeno 400mg"
+                        title="Ver receta"
+                      >
+                        <DocumentIcon className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -822,6 +919,82 @@ const MedicalHistoryPageContent = ({ sessionId, idPaciente }: MedicalHistoryPage
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Prescription viewer modal - example PDF-style view */}
+      {prescriptionViewerMedication && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="prescription-viewer-title"
+        >
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+              <h2 id="prescription-viewer-title" className="text-lg font-semibold text-gray-900">
+                Receta / Prescripción
+              </h2>
+              <button
+                type="button"
+                onClick={handleClosePrescriptionViewer}
+                className="p-2 rounded-lg hover:bg-gray-100"
+                aria-label="Cerrar visor de receta"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
+              {/* Example document body - simulates PDF prescription content */}
+              <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8 text-gray-800">
+                <div className="text-center border-b border-gray-300 pb-4 mb-6">
+                  <p className="text-sm font-semibold text-gray-700">RECETA MÉDICA</p>
+                  <p className="text-xs text-gray-500 mt-1">Documento de ejemplo — Vista previa</p>
+                </div>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <p className="text-gray-500 uppercase tracking-wide text-xs font-medium">Medicamento</p>
+                    <p className="font-semibold text-gray-900">{prescriptionViewerMedication.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 uppercase tracking-wide text-xs font-medium">Indicación / Posología</p>
+                    <p className="text-gray-900">{prescriptionViewerMedication.dosage}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-gray-500 uppercase tracking-wide text-xs font-medium">Prescrito por</p>
+                      <p className="text-gray-900">{prescriptionViewerMedication.prescribedBy}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 uppercase tracking-wide text-xs font-medium">Fecha de prescripción</p>
+                      <p className="text-gray-900">{prescriptionViewerMedication.since}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 uppercase tracking-wide text-xs font-medium">Tipo</p>
+                    <p className="text-gray-900">{prescriptionViewerMedication.type}</p>
+                  </div>
+                </div>
+                <div className="mt-8 pt-6 border-t border-gray-200 text-xs text-gray-400 text-center">
+                  Este es un documento de ejemplo. En producción aquí se mostraría el PDF de la receta oficial.
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleClosePrescriptionViewer}
+                className="min-h-[44px] px-4 py-2 text-white rounded-lg transition-all duration-200"
+                style={{ backgroundColor: '#2F80ED' }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#1E6FD9'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#2F80ED'; }}
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

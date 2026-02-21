@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
 import CustomSelect, { SelectOption } from '@/components/Select';
@@ -35,6 +35,77 @@ interface AppointmentHistory {
 }
 
 /**
+ * Interface for appointments cache stored in browser
+ */
+interface AppointmentsCacheData {
+  upcoming: Appointment[];
+  history: AppointmentHistory[];
+}
+
+const APPOINTMENTS_CACHE_STORAGE_KEY = 'liora_appointments_cache';
+
+/**
+ * Loads appointments cache from localStorage
+ * @returns Object with upcoming appointments and history
+ */
+const loadAppointmentsCache = (): AppointmentsCacheData => {
+  if (typeof window === 'undefined') {
+    return {
+      upcoming: [],
+      history: [],
+    };
+  }
+
+  try {
+    const rawData = window.localStorage.getItem(APPOINTMENTS_CACHE_STORAGE_KEY);
+
+    if (!rawData) {
+      return {
+        upcoming: [],
+        history: [],
+      };
+    }
+
+    const parsed = JSON.parse(rawData) as Partial<AppointmentsCacheData>;
+
+    const upcoming = Array.isArray(parsed.upcoming) ? (parsed.upcoming as Appointment[]) : [];
+    const history = Array.isArray(parsed.history) ? (parsed.history as AppointmentHistory[]) : [];
+
+    return {
+      upcoming,
+      history,
+    };
+  } catch {
+    return {
+      upcoming: [],
+      history: [],
+    };
+  }
+};
+
+/**
+ * Saves appointments cache to localStorage
+ * @param upcoming - Upcoming appointments list
+ * @param history - Appointment history list
+ */
+const saveAppointmentsCache = (upcoming: Appointment[], history: AppointmentHistory[]) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const cacheData: AppointmentsCacheData = {
+    upcoming,
+    history,
+  };
+
+  try {
+    window.localStorage.setItem(APPOINTMENTS_CACHE_STORAGE_KEY, JSON.stringify(cacheData));
+  } catch {
+    // Intentionally ignore storage errors to avoid breaking UI
+  }
+};
+
+/**
  * Interface for request appointment form data
  */
 interface RequestAppointmentFormData {
@@ -52,7 +123,7 @@ interface RequestAppointmentFormData {
 const AppointmentsPageContent = () => {
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<{ type: string; date: string } | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedCenterId, setSelectedCenterId] = useState<string>('');
   const [selectedSpecialtyCode, setSelectedSpecialtyCode] = useState<string>('');
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
@@ -63,6 +134,15 @@ const AppointmentsPageContent = () => {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState<number>(today.getMonth());
   const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+  const [appointmentHistory, setAppointmentHistory] = useState<AppointmentHistory[]>([]);
+
+  useEffect(() => {
+    const cache = loadAppointmentsCache();
+
+    setUpcomingAppointments(cache.upcoming);
+    setAppointmentHistory(cache.history);
+  }, []);
 
   // Form for requesting appointment
   const {
@@ -72,66 +152,6 @@ const AppointmentsPageContent = () => {
     reset: resetRequest,
     formState: { errors: errorsRequest },
   } = useForm<RequestAppointmentFormData>();
-
-  // Mock data for upcoming appointments
-  const upcomingAppointments: Appointment[] = [
-    {
-      id: '1',
-      centerId: 'centro1',
-      doctorId: 'dr1',
-      type: 'Control General',
-      doctor: 'Dr. Rodríguez',
-      specialty: 'Medicina General',
-      date: '5 Feb 2025',
-      time: '10:30 AM',
-      location: 'Consultorio 3, Piso 2',
-      status: 'confirmed',
-    },
-    {
-      id: '2',
-      centerId: 'centro2',
-      doctorId: 'dr4',
-      type: 'Control Endocrinología',
-      doctor: 'Dr. López',
-      specialty: 'Endocrinología',
-      date: '15 Feb 2025',
-      time: '3:00 PM',
-      location: 'Consultorio 5, Piso 3',
-      status: 'pending',
-    },
-  ];
-
-  // Mock data for appointment history
-  const appointmentHistory: AppointmentHistory[] = [
-    {
-      date: '02/02/2025',
-      doctor: 'Dr. Rodríguez',
-      specialty: 'Medicina General',
-      reason: 'Consulta General',
-      status: 'completed',
-    },
-    {
-      date: '28/01/2025',
-      doctor: 'Dr. Rodríguez',
-      specialty: 'Medicina General',
-      reason: 'Control Diabetes',
-      status: 'completed',
-    },
-    {
-      date: '15/01/2025',
-      doctor: 'Dr. Rodríguez',
-      specialty: 'Medicina General',
-      reason: 'Consulta Inicial',
-      status: 'completed',
-    },
-    {
-      date: '10/01/2025',
-      doctor: 'Dra. García',
-      specialty: 'Pediatría',
-      reason: 'Evaluación',
-      status: 'cancelled',
-    },
-  ];
 
   /**
    * Interface for medical center doctor working hours
@@ -670,7 +690,7 @@ const AppointmentsPageContent = () => {
    * @param appointment - The appointment to cancel
    */
   const handleOpenCancelModal = (appointment: Appointment) => {
-    setSelectedAppointment({ type: appointment.type, date: appointment.date });
+    setSelectedAppointment(appointment);
     setShowCancelModal(true);
   };
 
@@ -686,6 +706,29 @@ const AppointmentsPageContent = () => {
    * Handles confirming appointment cancellation
    */
   const handleConfirmCancel = () => {
+    if (!selectedAppointment) {
+      handleCloseCancelModal();
+      return;
+    }
+
+    const updatedUpcoming = upcomingAppointments.filter(
+      (appointment) => appointment.id !== selectedAppointment.id,
+    );
+
+    const newHistoryItem: AppointmentHistory = {
+      date: selectedAppointment.date,
+      doctor: selectedAppointment.doctor,
+      specialty: selectedAppointment.specialty,
+      reason: 'Cita cancelada por el paciente',
+      status: 'cancelled',
+    };
+
+    const updatedHistory = [...appointmentHistory, newHistoryItem];
+
+    setUpcomingAppointments(updatedUpcoming);
+    setAppointmentHistory(updatedHistory);
+    saveAppointmentsCache(updatedUpcoming, updatedHistory);
+
     handleCloseCancelModal();
     toast.success('Cita cancelada');
   };
@@ -731,6 +774,44 @@ const AppointmentsPageContent = () => {
       toast.error('Debe seleccionar centro, doctor, fecha y hora');
       return;
     }
+
+    const centerData = medicalCenters[selectedCenterId];
+    const doctorData = getSelectedDoctorData(selectedCenterId, selectedDoctorId);
+
+    if (!centerData || !doctorData) {
+      toast.error('No se ha podido obtener la información del centro o del doctor');
+      return;
+    }
+
+    const newAppointmentId = (() => {
+      if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+        return window.crypto.randomUUID();
+      }
+
+      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    })();
+
+    const formattedDateLabel = getSelectedDateLabel(selectedDate);
+
+    const newAppointment: Appointment = {
+      id: newAppointmentId,
+      centerId: selectedCenterId,
+      doctorId: selectedDoctorId,
+      type: 'Consulta médica',
+      doctor: doctorData.name,
+      specialty: doctorData.specialty,
+      date: formattedDateLabel,
+      time: selectedTime,
+      location: centerData.name,
+      status: 'pending',
+    };
+
+    const updatedUpcoming = [...upcomingAppointments, newAppointment];
+    const updatedHistory = [...appointmentHistory];
+
+    setUpcomingAppointments(updatedUpcoming);
+    setAppointmentHistory(updatedHistory);
+    saveAppointmentsCache(updatedUpcoming, updatedHistory);
 
     handleCloseRequestModal();
 
@@ -810,63 +891,69 @@ const AppointmentsPageContent = () => {
         {/* Upcoming Appointments */}
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Próximas Citas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {upcomingAppointments.map((appointment) => (
-              <div
-                key={appointment.id}
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md"
-              >
-                <div className="p-4 border-l-4" style={{ borderLeftColor: appointment.status === 'confirmed' ? '#2F80ED' : '#F59E0B' }}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(appointment.status)}`}>
-                          {getStatusLabel(appointment.status)}
-                        </span>
-                      </div>
-                      <h3 className="font-semibold text-gray-900">{appointment.type}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{appointment.doctor} • {appointment.specialty}</p>
-                      <div className="flex items-center gap-4 mt-3 text-sm">
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span>{appointment.date}</span>
+          {upcomingAppointments.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              Aún no tiene próximas citas programadas.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {upcomingAppointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md"
+                >
+                  <div className="p-4 border-l-4" style={{ borderLeftColor: appointment.status === 'confirmed' ? '#2F80ED' : '#F59E0B' }}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(appointment.status)}`}>
+                            {getStatusLabel(appointment.status)}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>{appointment.time}</span>
+                        <h3 className="font-semibold text-gray-900">{appointment.type}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{appointment.doctor} • {appointment.specialty}</p>
+                        <div className="flex items-center gap-4 mt-3 text-sm">
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>{appointment.date}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{appointment.time}</span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 mt-2 text-sm text-gray-500">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span>{appointment.location}</span>
+                        <div className="flex items-center gap-1 mt-2 text-sm text-gray-500">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span>{appointment.location}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-                    <button
-                  onClick={() => handleOpenRescheduleModal(appointment)}
-                      className="flex-1 min-h-[44px] px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200"
-                    >
-                      Reprogramar
-                    </button>
-                    <button
-                      onClick={() => handleOpenCancelModal(appointment)}
-                      className="flex-1 min-h-[44px] px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all duration-200"
-                    >
-                      Cancelar
-                    </button>
+                    <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => handleOpenRescheduleModal(appointment)}
+                        className="flex-1 min-h-[44px] px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200"
+                      >
+                        Reprogramar
+                      </button>
+                      <button
+                        onClick={() => handleOpenCancelModal(appointment)}
+                        className="flex-1 min-h-[44px] px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all duration-200"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Appointment History */}
@@ -884,21 +971,32 @@ const AppointmentsPageContent = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {appointmentHistory.map((appointment, index) => (
-                  <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{appointment.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{appointment.doctor}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{appointment.specialty}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{appointment.reason}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        appointment.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {appointment.status === 'completed' ? 'Completada' : 'Cancelada'}
-                      </span>
+                {appointmentHistory.length === 0 ? (
+                  <tr>
+                    <td
+                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center"
+                      colSpan={5}
+                    >
+                      Aún no tiene citas en su historial.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  appointmentHistory.map((appointment, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{appointment.date}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{appointment.doctor}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{appointment.specialty}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{appointment.reason}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          appointment.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {appointment.status === 'completed' ? 'Completada' : 'Cancelada'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -22,6 +22,30 @@ export const routing = defineRouting({
             'es': '/portal-medico/perfil',
             'en': '/medical-portal/profile',
         },
+        '/portal-medico/pacientes': {
+            'es': '/portal-medico/pacientes',
+            'en': '/medical-portal/patients',
+        },
+        '/portal-medico/calendario': {
+            'es': '/portal-medico/calendario',
+            'en': '/medical-portal/calendar',
+        },
+        '/portal-medico/sala-espera': {
+            'es': '/portal-medico/sala-espera',
+            'en': '/medical-portal/waiting-room',
+        },
+        '/portal-medico/consulta': {
+            'es': '/portal-medico/consulta',
+            'en': '/medical-portal/consultation',
+        },
+        '/portal-medico/plantillas': {
+            'es': '/portal-medico/plantillas',
+            'en': '/medical-portal/templates',
+        },
+        '/portal-medico/pacientes/[id]': {
+            'es': '/portal-medico/pacientes/[id]',
+            'en': '/medical-portal/patients/[id]',
+        },
         '/plataforma-salud/login': { 
             'es': '/plataforma-salud/inicio-sesion',
             'en': '/health-platform/login',
