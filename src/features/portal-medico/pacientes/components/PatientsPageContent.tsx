@@ -173,7 +173,7 @@ const PatientsPageContent = () => {
           {filteredPatients.map((patient) => (
             <Link
               key={patient.id}
-              href={`/portal-medico/pacientes/${patient.id}`}
+              href={{ pathname: '/portal-medico/pacientes/[id]', params: { id: patient.id } }}
               className="block bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:border-blue-200 hover:shadow-md transition-all"
             >
               <div className="flex items-start gap-4">

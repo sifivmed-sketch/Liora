@@ -42,6 +42,10 @@ export const routing = defineRouting({
             'es': '/portal-medico/plantillas',
             'en': '/medical-portal/templates',
         },
+        '/portal-medico/plantillas/[id]': {
+            'es': '/portal-medico/plantillas/[id]',
+            'en': '/medical-portal/templates/[id]',
+        },
         '/portal-medico/pacientes/[id]': {
             'es': '/portal-medico/pacientes/[id]',
             'en': '/medical-portal/patients/[id]',
